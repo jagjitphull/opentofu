@@ -1,0 +1,62 @@
+# Local .terraform directories
+**/.terraform/*
+
+# .tfstate files
+*.tfstate
+*.tfstate.*
+
+# Crash log files
+crash.log
+crash.*.log
+
+# Exclude all .tfvars files, which are likely to contain sensitive data
+*.tfvars
+*.tfvars.json
+
+# Ignore override files as they are usually used to override resources locally
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Ignore CLI configuration files
+.terraformrc
+terraform.rc
+
+# SSH private keys (IMPORTANT!)
+*.pem
+*.key
+id_rsa*
+ssh-key-*
+
+# Lock files
+.terraform.lock.hcl
+
+# Log files created by provisioners
+*.log
+provisioner-log.txt
+deployment-notifications.txt
+destruction-log.txt
+
+# Inventory files created by local-exec
+inventory.txt
+ssh-config-entry.txt
+
+# Backup files
+*.bak
+*.backup
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Temporary files
+tmp/
+temp/
