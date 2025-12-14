@@ -1,0 +1,2 @@
+Instance i-0361c64f24081e2d6 deployed at 52.90.116.239 on 2025-12-14T08:34:53Z
+Instance i-0361c64f24081e2d6 destroyed at 2025-12-14T08:35:41Z

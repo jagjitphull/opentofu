@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Provisioner Lab - Success!</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            background: white;
+            border-radius: 10px;
+            padding: 40px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            max-width: 600px;
+            text-align: center;
+        }
+
+        h1 {
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+
+        .success-icon {
+            font-size: 72px;
+            color: #10b981;
+            margin-bottom: 20px;
+        }
+
+        .info-box {
+            background: #f3f4f6;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin: 20px 0;
+            text-align: left;
+        }
+
+        .info-box h3 {
+            margin-top: 0;
+            color: #667eea;
+        }
+
+        .info-item {
+            margin: 10px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+
+        .label {
+            font-weight: bold;
+            color: #666;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="success-icon">✓</div>
+        <h1>Provisioners Lab Successful!</h1>
+        <p>Your EC2 instance has been successfully configured using OpenTofu provisioners.</p>
+
+        <div class="info-box">
+            <h3>What Was Configured:</h3>
+            <div class="info-item">
+                <span class="label">Web Server:</span> nginx
+            </div>
+            <div class="info-item">
+                <span class="label">Configuration:</span> Custom nginx.conf deployed
+            </div>
+            <div class="info-item">
+                <span class="label">Page:</span> Deployed via file provisioner
+            </div>
+            <div class="info-item">
+                <span class="label">Scripts:</span> Executed via remote-exec
+            </div>
+        </div>
+
+        <div class="info-box">
+            <h3>Provisioners Used:</h3>
+            <div class="info-item">✓ file provisioner (config files)</div>
+            <div class="info-item">✓ remote-exec provisioner (installation)</div>
+            <div class="info-item">✓ local-exec provisioner (logging)</div>
+        </div>
+
+        <p style="margin-top: 30px; color: #666; font-size: 14px;">
+            Deployed with OpenTofu | Instance ID: <span id="instance-id">Loading...</span>
+        </p>
+    </div>
+
+    <script>
+        // Try to load instance metadata
+        fetch('http://169.254.169.254/latest/meta-data/instance-id')
+            .then(response => response.text())
+            .then(data => {
+                document.getElementById('instance-id').textContent = data;
+            })
+            .catch(() => {
+                document.getElementById('instance-id').textContent = 'N/A';
+            });
+    </script>
+</body>
+
+</html>
