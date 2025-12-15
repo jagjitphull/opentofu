@@ -1,0 +1,19 @@
+{
+    "resource_changes": [
+        {
+            "type": "aws_instance",
+            "name": "web_server",
+            "change": {
+                "actions": [
+                    "create"
+                ],
+                "after": {
+                    "instance_type": "t2.large",
+                    "tags": {
+                        "Name": "web-01"
+                    }
+                }
+            }
+        }
+    ]
+}
