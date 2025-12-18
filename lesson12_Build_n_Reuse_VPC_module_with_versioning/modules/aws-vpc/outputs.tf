@@ -57,3 +57,13 @@ output "private_route_table_ids" {
   description = "List of IDs of private route tables"
   value       = aws_route_table.private[*].id
 }
+
+output "flow_logs_log_group_name" {
+  description = "Name of the CloudWatch Log Group for VPC Flow Logs"
+  value       = var.enable_flow_logs ? aws_cloudwatch_log_group.flow_logs[0].name : null
+}
+
+output "flow_logs_iam_role_arn" {
+  description = "ARN of the IAM role for VPC Flow Logs"
+  value       = var.enable_flow_logs ? aws_iam_role.flow_logs[0].arn : null
+}

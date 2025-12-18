@@ -27,3 +27,7 @@ override.tf
 override.tf.json
 *_override.tf
 *_override.tf.json
+
+#Ignore the ssh & pem keys
+*.pem
+ssh-key-*
