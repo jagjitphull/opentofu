@@ -2,7 +2,7 @@
 
 This tutorial provides a complete, step-by-step guide to integrating OpenTofu with Spacelift and deploying an AWS EC2 instance.
 
----
+
 
 ## Overview
 
@@ -16,9 +16,6 @@ This tutorial provides a complete, step-by-step guide to integrating OpenTofu wi
 
 GitHub Repo → Spacelift Stack → AWS Cloud Integration → EC2 Instance
 
-
----
-
 ## Prerequisites
 
 1. **Spacelift Account** - Sign up at [spacelift.io](https://spacelift.io) (14-day free trial available)
@@ -26,7 +23,7 @@ GitHub Repo → Spacelift Stack → AWS Cloud Integration → EC2 Instance
 3. **GitHub/GitLab Account** - To host your OpenTofu code
 4. **Git** - To push your code to the repository
 
----
+
 
 ## Part 1: Prepare Your GitHub Repository
 
@@ -49,9 +46,6 @@ opentofu-spacelift-demo/
 ├── variables.tf
 ├── outputs.tf
 └── versions.tf
-
-
----
 
 ## Part 2: OpenTofu Code for EC2 Instance
 
@@ -119,9 +113,9 @@ variable "allowed_ssh_cidr" {
 ### File: `main.tf`
 
 hcl
-#--------------------------------------------------------------
+#--
 # Data Sources
-#--------------------------------------------------------------
+#--
 
 # Get the latest Amazon Linux 2023 AMI
 data "aws_ami" "amazon_linux_2023" {
@@ -149,9 +143,9 @@ data "aws_vpc" "default" {
   default = true
 }
 
-#--------------------------------------------------------------
+#--
 # Security Group
-#--------------------------------------------------------------
+#--
 
 resource "aws_security_group" "ec2_sg" {
   name        = "${var.instance_name}-sg"
@@ -189,9 +183,9 @@ resource "aws_security_group" "ec2_sg" {
   }
 }
 
-#--------------------------------------------------------------
+#--
 # EC2 Instance
-#--------------------------------------------------------------
+#--
 
 resource "aws_instance" "demo" {
   ami                    = data.aws_ami.amazon_linux_2023.id
@@ -272,7 +266,7 @@ git commit -m "Add OpenTofu code for EC2 instance"
 git push origin main
 
 
----
+
 
 ## Part 3: Set Up Spacelift
 
@@ -370,7 +364,7 @@ output "role_arn" {
    - **Role ARN:** Paste the ARN from Step 3.2
 4. Click **Create**
 
----
+
 
 ## Part 4: Create a Spacelift Stack
 
@@ -413,7 +407,7 @@ If you want to override default variable values:
    - `TF_VAR_instance_type` = `t3.small`
    - `TF_VAR_environment` = `staging`
 
----
+
 
 ## Part 5: Deploy the Infrastructure
 
@@ -442,7 +436,7 @@ If you want to override default variable values:
 2. Open it in your browser
 3. You should see: "Hello from Spacelift + OpenTofu!"
 
----
+
 
 ## Part 6: Enable GitOps (Optional but Recommended)
 
@@ -460,7 +454,7 @@ Now, any push to your `main` branch will automatically deploy changes!
 
 Spacelift automatically runs `tofu plan` on pull requests and posts the results as a comment.
 
----
+
 
 ## Cleanup
 
@@ -472,7 +466,7 @@ To destroy the infrastructure:
 
 Or delete the stack entirely from Stack Settings.
 
----
+
 
 ## Troubleshooting
 
@@ -506,20 +500,20 @@ root_block_device {
 }
 
 
----
+
 
 ## Complete File Checklist
 
 Ensure your repository contains these files:
 
 | File | Purpose |
-|------|---------|
+|||
 | `versions.tf` | OpenTofu/provider version constraints |
 | `variables.tf` | Input variable definitions |
 | `main.tf` | AWS resources (security group, EC2) |
 | `outputs.tf` | Output values (IP, DNS, URL) |
 
----
+
 
 ## Next Steps
 
@@ -529,7 +523,7 @@ Ensure your repository contains these files:
 4. **Set Up Drift Detection:** Automatically detect infrastructure drift
 5. **Multi-Environment:** Create dev/staging/prod stacks using the same code
 
----
+
 
 ## Additional Resources
 
