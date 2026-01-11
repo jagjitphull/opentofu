@@ -1,0 +1,1657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenTofu Drift Detection and Resolution - Hands-On Lab</title>
+    <style>
+        /* Prevent text selection and copying */
+        * {
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+        
+        /* Allow selection in code blocks for copying commands */
+        pre, code {
+            -webkit-user-select: text;
+            -moz-user-select: text;
+            -ms-user-select: text;
+            user-select: text;
+        }
+        
+        :root {
+            --primary-color: #1565C0;
+            --secondary-color: #42A5F5;
+            --success-color: #4CAF50;
+            --warning-color: #FF9800;
+            --danger-color: #f44336;
+            --light-bg: #f5f5f5;
+            --border-color: #e0e0e0;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #fff;
+        }
+        
+        /* Print styles */
+        @media print {
+            body { max-width: 100%; padding: 0; }
+            .no-print { display: none; }
+            .page-break { page-break-before: always; }
+        }
+        
+        /* Header */
+        .header {
+            text-align: center;
+            padding: 40px 0;
+            border-bottom: 3px solid var(--primary-color);
+            margin-bottom: 30px;
+        }
+        
+        .header .label {
+            color: #666;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        
+        .header h1 {
+            color: #333;
+            font-size: 2.5em;
+            margin: 10px 0;
+        }
+        
+        .header .subtitle {
+            color: var(--primary-color);
+            font-size: 1.2em;
+        }
+        
+        /* Metadata table */
+        .metadata {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            margin: 30px 0;
+            flex-wrap: wrap;
+        }
+        
+        .metadata-item {
+            text-align: center;
+        }
+        
+        .metadata-item .label {
+            font-weight: bold;
+            color: #666;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+        
+        .metadata-item .value {
+            font-size: 16px;
+            color: #333;
+        }
+        
+        /* Table of Contents */
+        .toc {
+            background: var(--light-bg);
+            padding: 20px 30px;
+            border-radius: 8px;
+            margin: 30px 0;
+        }
+        
+        .toc h2 {
+            margin-top: 0;
+            color: var(--primary-color);
+        }
+        
+        .toc ul {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .toc li {
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .toc li:last-child {
+            border-bottom: none;
+        }
+        
+        .toc a {
+            color: #333;
+            text-decoration: none;
+        }
+        
+        .toc a:hover {
+            color: var(--primary-color);
+        }
+        
+        /* Headings */
+        h1 { color: var(--primary-color); border-bottom: 2px solid var(--primary-color); padding-bottom: 10px; }
+        h2 { color: #333; margin-top: 30px; }
+        h3 { color: #555; }
+        
+        /* Step headers */
+        .step-header {
+            background: var(--primary-color);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 4px;
+            text-align: center;
+            font-weight: bold;
+            margin: 30px 0 20px 0;
+        }
+        
+        /* Code blocks */
+        pre {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px 20px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        
+        .code-title {
+            background: #333;
+            color: #fff;
+            padding: 8px 15px;
+            border-radius: 6px 6px 0 0;
+            font-size: 12px;
+            font-weight: bold;
+            margin-bottom: -6px;
+        }
+        
+        .code-title + pre {
+            border-radius: 0 0 6px 6px;
+        }
+        
+        code {
+            background: #f0f0f0;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.9em;
+        }
+        
+        pre code {
+            background: none;
+            padding: 0;
+        }
+        
+        /* Syntax highlighting */
+        .comment { color: #6a9955; }
+        .keyword { color: #569cd6; }
+        .string { color: #ce9178; }
+        .variable { color: #9cdcfe; }
+        
+        /* Info boxes */
+        .info-box {
+            padding: 15px 20px;
+            border-radius: 6px;
+            margin: 20px 0;
+            border-left: 4px solid;
+        }
+        
+        .info-box.tip {
+            background: #e3f2fd;
+            border-color: var(--primary-color);
+        }
+        
+        .info-box.warning {
+            background: #fff3e0;
+            border-color: var(--warning-color);
+        }
+        
+        .info-box.danger {
+            background: #ffebee;
+            border-color: var(--danger-color);
+        }
+        
+        .info-box.success {
+            background: #e8f5e9;
+            border-color: var(--success-color);
+        }
+        
+        .info-box-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border: 1px solid var(--border-color);
+        }
+        
+        th {
+            background: #e3f2fd;
+            font-weight: bold;
+        }
+        
+        tr:nth-child(even) {
+            background: #fafafa;
+        }
+        
+        /* Checklists */
+        .checklist {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .checklist li {
+            padding: 8px 0;
+            padding-left: 30px;
+            position: relative;
+        }
+        
+        .checklist li::before {
+            content: "☐";
+            position: absolute;
+            left: 0;
+            color: var(--primary-color);
+        }
+        
+        /* Numbered lists */
+        ol {
+            padding-left: 20px;
+        }
+        
+        ol li {
+            padding: 5px 0;
+        }
+        
+        /* Directory structure */
+        .directory {
+            background: var(--light-bg);
+            padding: 15px 20px;
+            border-radius: 6px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 14px;
+        }
+        
+        /* Congratulations box */
+        .congrats {
+            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+            padding: 30px;
+            border-radius: 8px;
+            text-align: center;
+            margin: 30px 0;
+            border: 2px solid var(--success-color);
+        }
+        
+        .congrats h2 {
+            color: var(--success-color);
+            margin-top: 0;
+        }
+        
+        /* Quick reference */
+        .quick-ref {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        
+        /* Protected notice */
+        .protected-notice {
+            background: #fff3e0;
+            border: 1px solid var(--warning-color);
+            padding: 10px 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            font-size: 12px;
+            color: #666;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            .header h1 { font-size: 1.8em; }
+            pre { font-size: 12px; }
+            table { font-size: 14px; }
+        }
+    </style>
+</head>
+<body oncontextmenu="return false;">
+    
+    <div class="protected-notice no-print">
+        🔒 <strong>Protected Training Document</strong> - This document is for reference only. Code blocks can be copied for lab exercises.
+    </div>
+
+    <!-- Header -->
+    <div class="header">
+        <div class="label">Hands-On Lab</div>
+        <h1>OpenTofu Drift Detection<br>and Resolution</h1>
+        <div class="subtitle">Detect → Analyze → Resolve → Prevent</div>
+    </div>
+    
+    <div class="metadata">
+        <div class="metadata-item">
+            <div class="label">Duration</div>
+            <div class="value">60 - 90 minutes</div>
+        </div>
+        <div class="metadata-item">
+            <div class="label">Difficulty</div>
+            <div class="value">Beginner to Intermediate</div>
+        </div>
+        <div class="metadata-item">
+            <div class="label">Cloud Provider</div>
+            <div class="value">AWS</div>
+        </div>
+    </div>
+
+    <!-- Table of Contents -->
+    <div class="toc">
+        <h2>Table of Contents</h2>
+        <ul>
+            <li><a href="#section1">Section 1: Lab Overview and Prerequisites</a></li>
+            <li><a href="#section2">Section 2: Understanding Infrastructure Drift</a></li>
+            <li><a href="#section3">Section 3: Set Up the Lab Environment</a></li>
+            <li><a href="#section4">Section 4: Create and Introduce Drift</a></li>
+            <li><a href="#section5">Section 5: Detect Drift with OpenTofu</a></li>
+            <li><a href="#section6">Section 6: Detect Drift with Spacelift</a></li>
+            <li><a href="#section7">Section 7: Resolve Drift - Multiple Strategies</a></li>
+            <li><a href="#section8">Section 8: Prevent Future Drift</a></li>
+            <li><a href="#section9">Section 9: Troubleshooting Guide</a></li>
+            <li><a href="#section10">Section 10: Best Practices and Next Steps</a></li>
+            <li><a href="#quickref">Quick Reference Card</a></li>
+        </ul>
+    </div>
+
+    <!-- Section 1 -->
+    <div class="page-break"></div>
+    <h1 id="section1">Section 1: Lab Overview and Prerequisites</h1>
+    
+    <h2>1.1 Learning Objectives</h2>
+    <p>By the end of this lab, you will be able to:</p>
+    <ul class="checklist">
+        <li>Understand what infrastructure drift is and why it occurs</li>
+        <li>Detect drift using OpenTofu plan command</li>
+        <li>Configure automated drift detection in Spacelift</li>
+        <li>Analyze drift reports and identify root causes</li>
+        <li>Resolve drift using multiple strategies (reconcile, import, refresh)</li>
+        <li>Implement preventive measures to minimize future drift</li>
+    </ul>
+    
+    <h2>1.2 Prerequisites</h2>
+    
+    <h3>Required Access</h3>
+    <ol>
+        <li>Spacelift account with stack management permissions</li>
+        <li>AWS account with EC2 and S3 permissions</li>
+        <li>GitHub repository for infrastructure code</li>
+    </ol>
+    
+    <h3>Required Tools</h3>
+    <ol>
+        <li>OpenTofu CLI (version 1.6.0 or later)</li>
+        <li>AWS CLI configured with valid credentials</li>
+        <li>Git CLI installed and configured</li>
+        <li>Text editor or IDE (VS Code recommended)</li>
+    </ol>
+    
+    <h3>Verify Your Environment</h3>
+    <p>Run these commands to verify your setup:</p>
+    
+    <div class="code-title">Terminal</div>
+    <pre><span class="comment"># Verify OpenTofu</span>
+tofu version
+<span class="comment"># Expected: OpenTofu v1.6.0 or higher</span>
+
+<span class="comment"># Verify AWS CLI</span>
+aws sts get-caller-identity
+
+<span class="comment"># Verify AWS permissions for EC2</span>
+aws ec2 describe-instances --max-results 1
+
+<span class="comment"># Verify AWS permissions for S3</span>
+aws s3 ls</pre>
+    
+    <div class="info-box tip">
+        <div class="info-box-title">💡 Environment Check</div>
+        If any command fails, resolve the issue before proceeding. All prerequisites must be met for successful lab completion.
+    </div>
+
+    <!-- Section 2 -->
+    <div class="page-break"></div>
+    <h1 id="section2">Section 2: Understanding Infrastructure Drift</h1>
+    
+    <h2>2.1 What is Infrastructure Drift?</h2>
+    <p>Infrastructure drift occurs when the actual state of your infrastructure differs from the desired state defined in your OpenTofu configuration. This mismatch can lead to:</p>
+    <ol>
+        <li>Security vulnerabilities from unauthorized changes</li>
+        <li>Compliance violations when configurations deviate from standards</li>
+        <li>Unexpected behavior during future deployments</li>
+        <li>Difficulty reproducing environments</li>
+    </ol>
+    
+    <h2>2.2 Common Causes of Drift</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Cause</th>
+                <th>Description</th>
+                <th>Example</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Manual Changes</td>
+                <td>Direct modifications via console or CLI</td>
+                <td>Editing security group rules in AWS Console</td>
+            </tr>
+            <tr>
+                <td>Emergency Fixes</td>
+                <td>Hotfixes applied during incidents</td>
+                <td>Scaling up instances during outage</td>
+            </tr>
+            <tr>
+                <td>Automated Processes</td>
+                <td>Scripts or tools modifying resources</td>
+                <td>Auto-scaling changing instance count</td>
+            </tr>
+            <tr>
+                <td>External Dependencies</td>
+                <td>Third-party integrations</td>
+                <td>CDN provider updating configurations</td>
+            </tr>
+            <tr>
+                <td>State File Issues</td>
+                <td>Corrupted or outdated state</td>
+                <td>State not updated after failed apply</td>
+            </tr>
+        </tbody>
+    </table>
+    
+    <h2>2.3 The Drift Detection Workflow</h2>
+    <p>This lab follows the complete drift management lifecycle:</p>
+    <table>
+        <thead>
+            <tr>
+                <th>Phase</th>
+                <th>Action</th>
+                <th>Description</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>1</strong></td>
+                <td><strong>Detect</strong></td>
+                <td>Identify differences between state and reality</td>
+            </tr>
+            <tr>
+                <td><strong>2</strong></td>
+                <td><strong>Analyze</strong></td>
+                <td>Understand what changed and why</td>
+            </tr>
+            <tr>
+                <td><strong>3</strong></td>
+                <td><strong>Resolve</strong></td>
+                <td>Reconcile infrastructure with desired state</td>
+            </tr>
+            <tr>
+                <td><strong>4</strong></td>
+                <td><strong>Prevent</strong></td>
+                <td>Implement controls to minimize future drift</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- Section 3 -->
+    <div class="page-break"></div>
+    <h1 id="section3">Section 3: Set Up the Lab Environment</h1>
+    
+    <div class="step-header">STEP 1: CREATE THE INFRASTRUCTURE CODE</div>
+    
+    <h2>3.1 Create Repository Structure</h2>
+    <p>Create a new directory for this lab:</p>
+    
+    <div class="code-title">Terminal</div>
+    <pre><span class="comment"># Create lab directory</span>
+mkdir -p drift-detection-lab
+cd drift-detection-lab
+
+<span class="comment"># Initialize git repository</span>
+git init
+
+<span class="comment"># Create file structure</span>
+mkdir -p stacks/drift-lab</pre>
+    
+    <h2>3.2 Directory Structure</h2>
+    <div class="directory">
+drift-detection-lab/
+├── README.md
+└── stacks/
+    └── drift-lab/
+        ├── versions.tf
+        ├── providers.tf
+        ├── variables.tf
+        ├── main.tf
+        └── outputs.tf
+    </div>
+    
+    <div class="step-header">STEP 2: CREATE THE OPENTOFU FILES</div>
+    
+    <h2>3.3 versions.tf</h2>
+    <div class="code-title">stacks/drift-lab/versions.tf</div>
+    <pre><span class="comment"># versions.tf</span>
+<span class="comment"># Defines version constraints for OpenTofu and providers</span>
+
+<span class="keyword">terraform</span> {
+  required_version = <span class="string">">= 1.6.0"</span>
+  
+  required_providers {
+    aws = {
+      source  = <span class="string">"hashicorp/aws"</span>
+      version = <span class="string">"~> 5.0"</span>
+    }
+  }
+}</pre>
+    
+    <h2>3.4 providers.tf</h2>
+    <div class="code-title">stacks/drift-lab/providers.tf</div>
+    <pre><span class="comment"># providers.tf</span>
+<span class="comment"># AWS provider configuration</span>
+
+<span class="keyword">provider</span> <span class="string">"aws"</span> {
+  region = var.aws_region
+  
+  default_tags {
+    tags = {
+      Project     = <span class="string">"drift-detection-lab"</span>
+      Environment = var.environment
+      ManagedBy   = <span class="string">"OpenTofu"</span>
+    }
+  }
+}</pre>
+    
+    <h2>3.5 variables.tf</h2>
+    <div class="code-title">stacks/drift-lab/variables.tf</div>
+    <pre><span class="comment"># variables.tf</span>
+<span class="comment"># Input variables for the drift detection lab</span>
+
+<span class="keyword">variable</span> <span class="string">"aws_region"</span> {
+  description = <span class="string">"AWS region for resources"</span>
+  type        = string
+  default     = <span class="string">"us-east-1"</span>
+}
+
+<span class="keyword">variable</span> <span class="string">"environment"</span> {
+  description = <span class="string">"Deployment environment"</span>
+  type        = string
+  default     = <span class="string">"lab"</span>
+}
+
+<span class="keyword">variable</span> <span class="string">"instance_type"</span> {
+  description = <span class="string">"EC2 instance type"</span>
+  type        = string
+  default     = <span class="string">"t3.micro"</span>
+}
+
+<span class="keyword">variable</span> <span class="string">"bucket_prefix"</span> {
+  description = <span class="string">"Prefix for S3 bucket name"</span>
+  type        = string
+  default     = <span class="string">"drift-lab"</span>
+}</pre>
+    
+    <h2>3.6 main.tf</h2>
+    <div class="code-title">stacks/drift-lab/main.tf</div>
+    <pre><span class="comment"># main.tf</span>
+<span class="comment"># Resources for drift detection demonstration</span>
+
+<span class="comment"># Random suffix for unique naming</span>
+<span class="keyword">resource</span> <span class="string">"random_id"</span> <span class="string">"suffix"</span> {
+  byte_length = 4
+}
+
+<span class="comment"># S3 Bucket - Simple resource for drift demo</span>
+<span class="keyword">resource</span> <span class="string">"aws_s3_bucket"</span> <span class="string">"demo"</span> {
+  bucket = <span class="string">"${var.bucket_prefix}-${random_id.suffix.hex}"</span>
+  
+  tags = {
+    Name        = <span class="string">"Drift Detection Demo Bucket"</span>
+    Purpose     = <span class="string">"Training"</span>
+    CostCenter  = <span class="string">"Training-001"</span>
+  }
+}
+
+<span class="comment"># S3 Bucket Versioning</span>
+<span class="keyword">resource</span> <span class="string">"aws_s3_bucket_versioning"</span> <span class="string">"demo"</span> {
+  bucket = aws_s3_bucket.demo.id
+  
+  versioning_configuration {
+    status = <span class="string">"Enabled"</span>
+  }
+}
+
+<span class="comment"># Security Group - Common drift target</span>
+<span class="keyword">resource</span> <span class="string">"aws_security_group"</span> <span class="string">"demo"</span> {
+  name        = <span class="string">"drift-demo-sg-${random_id.suffix.hex}"</span>
+  description = <span class="string">"Security group for drift detection demo"</span>
+  
+  <span class="comment"># SSH access - restricted to specific CIDR</span>
+  ingress {
+    description = <span class="string">"SSH from allowed IPs"</span>
+    from_port   = 22
+    to_port     = 22
+    protocol    = <span class="string">"tcp"</span>
+    cidr_blocks = [<span class="string">"10.0.0.0/8"</span>]
+  }
+  
+  <span class="comment"># HTTP access</span>
+  ingress {
+    description = <span class="string">"HTTP"</span>
+    from_port   = 80
+    to_port     = 80
+    protocol    = <span class="string">"tcp"</span>
+    cidr_blocks = [<span class="string">"0.0.0.0/0"</span>]
+  }
+  
+  <span class="comment"># Outbound traffic</span>
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = <span class="string">"-1"</span>
+    cidr_blocks = [<span class="string">"0.0.0.0/0"</span>]
+  }
+  
+  tags = {
+    Name = <span class="string">"drift-demo-sg"</span>
+  }
+}
+
+<span class="comment"># Data source for latest Amazon Linux 2023 AMI</span>
+<span class="keyword">data</span> <span class="string">"aws_ami"</span> <span class="string">"amazon_linux"</span> {
+  most_recent = true
+  owners      = [<span class="string">"amazon"</span>]
+  
+  filter {
+    name   = <span class="string">"name"</span>
+    values = [<span class="string">"al2023-ami-*-x86_64"</span>]
+  }
+  
+  filter {
+    name   = <span class="string">"virtualization-type"</span>
+    values = [<span class="string">"hvm"</span>]
+  }
+}</pre>
+    
+    <h2>3.7 outputs.tf</h2>
+    <div class="code-title">stacks/drift-lab/outputs.tf</div>
+    <pre><span class="comment"># outputs.tf</span>
+<span class="comment"># Output values for reference and verification</span>
+
+<span class="keyword">output</span> <span class="string">"bucket_name"</span> {
+  description = <span class="string">"Name of the S3 bucket"</span>
+  value       = aws_s3_bucket.demo.id
+}
+
+<span class="keyword">output</span> <span class="string">"bucket_arn"</span> {
+  description = <span class="string">"ARN of the S3 bucket"</span>
+  value       = aws_s3_bucket.demo.arn
+}
+
+<span class="keyword">output</span> <span class="string">"security_group_id"</span> {
+  description = <span class="string">"ID of the security group"</span>
+  value       = aws_security_group.demo.id
+}
+
+<span class="keyword">output</span> <span class="string">"security_group_name"</span> {
+  description = <span class="string">"Name of the security group"</span>
+  value       = aws_security_group.demo.name
+}</pre>
+    
+    <div class="step-header">STEP 3: DEPLOY THE INITIAL INFRASTRUCTURE</div>
+    
+    <h2>3.8 Initialize and Apply</h2>
+    <div class="code-title">Terminal</div>
+    <pre><span class="comment"># Navigate to stack directory</span>
+cd stacks/drift-lab
+
+<span class="comment"># Initialize OpenTofu</span>
+tofu init
+
+<span class="comment"># Validate configuration</span>
+tofu validate
+<span class="comment"># Expected: Success! The configuration is valid.</span>
+
+<span class="comment"># Preview changes</span>
+tofu plan
+
+<span class="comment"># Apply the configuration</span>
+tofu apply -auto-approve
+
+<span class="comment"># Save the outputs for later reference</span>
+tofu output > ../../initial-outputs.txt</pre>
+    
+    <div class="info-box tip">
+        <div class="info-box-title">💡 Save Your Outputs</div>
+        Note the bucket_name and security_group_id from the outputs. You will need these values to introduce drift in the next section.
+    </div>
+    
+    <h2>3.9 Verify Deployment</h2>
+    <div class="code-title">Terminal</div>
+    <pre><span class="comment"># Verify S3 bucket exists</span>
+aws s3 ls | grep drift-lab
+
+<span class="comment"># Verify security group exists</span>
+aws ec2 describe-security-groups \
+  --filters "Name=group-name,Values=drift-demo-sg-*" \
+  --query "SecurityGroups[*].[GroupId,GroupName]" \
+  --output table</pre>
+
+    <!-- Section 4 -->
+    <div class="page-break"></div>
+    <h1 id="section4">Section 4: Create and Introduce Drift</h1>
+    
+    <p>In this section, we will intentionally introduce drift by making manual changes to resources outside of OpenTofu. This simulates real-world scenarios where drift commonly occurs.</p>
+    
+    <div class="step-header">STEP 4: INTRODUCE DRIFT VIA AWS CONSOLE/CLI</div>
+    
+    <h2>4.1 Drift Scenario 1: S3 Bucket Tags</h2>
+    <p>Add an unauthorized tag to the S3 bucket:</p>
+    
+    <div class="code-title">Terminal</div>
+    <pre><span class="comment"># Get your bucket name from outputs</span>
+BUCKET_NAME=$(tofu output -raw bucket_name)
+
+<span class="comment"># Add a manual tag (simulating emergency change)</span>
+aws s3api put-bucket-tagging \
+  --bucket $BUCKET_NAME \
+  --tagging 'TagSet=[{Key=Name,Value=Drift Detection Demo Bucket},{Key=Purpose,Value=Training},{Key=CostCenter,Value=Training-001},{Key=ManualChange,Value=EmergencyFix}]'
+
+<span class="comment"># Verify the tag was added</span>
+aws s3api get-bucket-tagging --bucket $BUCKET_NAME</pre>
+    
+    <h2>4.2 Drift Scenario 2: Security Group Rules</h2>
+    <p>Add an unauthorized ingress rule to the security group (common during incident response):</p>
+    
+    <div class="code-title">Terminal</div>
+    <pre><span class="comment"># Get your security group ID from outputs</span>
+SG_ID=$(tofu output -raw security_group_id)
+
+<span class="comment"># Add a manual rule (simulating emergency SSH access)</span>
+aws ec2 authorize-security-group-ingress \
+  --group-id $SG_ID \
+  --protocol tcp \
+  --port 22 \
+  --cidr 0.0.0.0/0 \
+  --tag-specifications 'ResourceType=security-group-rule,Tags=[{Key=Purpose,Value=EmergencyAccess}]'
+
+<span class="comment"># Verify the rule was added</span>
+aws ec2 describe-security-groups \
+  --group-ids $SG_ID \
+  --query "SecurityGroups[0].IpPermissions"</pre>
+    
+    <div class="info-box danger">
+        <div class="info-box-title">⚠️ Security Alert</div>
+        We just added a rule allowing SSH from anywhere (0.0.0.0/0). In production, this would be a serious security vulnerability. This is exactly the type of drift that needs to be detected and remediated quickly.
+    </div>
+    
+    <h2>4.3 Drift Scenario 3: Bucket Versioning</h2>
+    <p>Disable bucket versioning (simulating cost-cutting measure):</p>
+    
+    <div class="code-title">Terminal</div>
+    <pre><span class="comment"># Suspend versioning on the bucket</span>
+aws s3api put-bucket-versioning \
+  --bucket $BUCKET_NAME \
+  --versioning-configuration Status=Suspended
+
+<span class="comment"># Verify versioning is suspended</span>
+aws s3api get-bucket-versioning --bucket $BUCKET_NAME</pre>
+    
+    <h2>4.4 Summary of Introduced Drift</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Resource</th>
+                <th>Drift Type</th>
+                <th>Impact</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>S3 Bucket</td>
+                <td>Added tag: ManualChange=EmergencyFix</td>
+                <td>Minor - Cosmetic</td>
+            </tr>
+            <tr>
+                <td>Security Group</td>
+                <td>Added 0.0.0.0/0 SSH rule</td>
+                <td><strong style="color: #f44336;">Critical - Security Risk</strong></td>
+            </tr>
+            <tr>
+                <td>S3 Versioning</td>
+                <td>Changed from Enabled to Suspended</td>
+                <td>Medium - Data Protection</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- Section 5 -->
+    <div class="page-break"></div>
+    <h1 id="section5">Section 5: Detect Drift with OpenTofu</h1>
+    
+    <div class="step-header">STEP 5: USE TOFU PLAN FOR DRIFT DETECTION</div>
+    
+    <h2>5.1 Understanding tofu plan for Drift</h2>
+    <p>The <code>tofu plan</code> command compares three things:</p>
+    <ol>
+        <li>Your configuration files (desired state)</li>
+        <li>The state file (last known state)</li>
+        <li>The actual infrastructure (real state)</li>
+    </ol>
+    <p>When drift exists, <code>tofu plan</code> will show changes needed to bring infrastructure back to the desired state.</p>
+    
+    <h2>5.2 Run Drift Detection</h2>
+    <div class="code-title">Terminal</div>
+    <pre><span class="comment"># Navigate to stack directory</span>
+cd stacks/drift-lab
+
+<span class="comment"># Run plan to detect drift</span>
+tofu plan
+
+<span class="comment"># For detailed output, use -detailed-exitcode</span>
+tofu plan -detailed-exitcode
+<span class="comment"># Exit codes:</span>
+<span class="comment">#   0 = No changes (no drift)</span>
+<span class="comment">#   1 = Error</span>
+<span class="comment">#   2 = Changes detected (drift exists)</span></pre>
+    
+    <h2>5.3 Expected Output</h2>
+    <p>You should see output similar to:</p>
+    
+    <div class="code-title">Plan Output - Drift Detected</div>
+    <pre><span class="comment"># aws_s3_bucket.demo will be updated in-place</span>
+<span class="keyword">~</span> resource "aws_s3_bucket" "demo" {
+    id     = "drift-lab-a1b2c3d4"
+    <span class="comment"># (other attributes unchanged)</span>
+    
+  <span class="keyword">~</span> tags = {
+      <span class="keyword">-</span> "ManualChange" = "EmergencyFix" <span class="keyword">-></span> null
+        <span class="comment"># (other tags unchanged)</span>
+    }
+  }
+
+<span class="comment"># aws_s3_bucket_versioning.demo will be updated in-place</span>
+<span class="keyword">~</span> resource "aws_s3_bucket_versioning" "demo" {
+    id     = "drift-lab-a1b2c3d4"
+    
+  <span class="keyword">~</span> versioning_configuration {
+      <span class="keyword">~</span> status = "Suspended" <span class="keyword">-></span> "Enabled"
+    }
+  }
+
+<span class="comment"># aws_security_group.demo will be updated in-place</span>
+<span class="keyword">~</span> resource "aws_security_group" "demo" {
+    id   = "sg-0123456789abcdef"
+    name = "drift-demo-sg-a1b2c3d4"
+    
+  <span class="keyword">-</span> ingress {
+      - cidr_blocks = ["0.0.0.0/0"]
+      - from_port   = 22
+      - protocol    = "tcp"
+      - to_port     = 22
+    }
+  }
+
+Plan: 0 to add, 3 to change, 0 to destroy.</pre>
+    
+    <div class="info-box tip">
+        <div class="info-box-title">💡 Reading the Plan</div>
+        The <code>~</code> symbol indicates in-place updates. The <code>-</code> prefix shows attributes that will be removed to match desired state. The plan shows exactly what will change to eliminate drift.
+    </div>
+    
+    <h2>5.4 Using tofu refresh</h2>
+    <p>The <code>tofu refresh</code> command updates the state file to match actual infrastructure without making changes:</p>
+    
+    <div class="code-title">Terminal</div>
+    <pre><span class="comment"># Refresh state from actual infrastructure</span>
+tofu refresh
+
+<span class="comment"># Now run plan again</span>
+tofu plan
+<span class="comment"># This will still show the same drift because</span>
+<span class="comment"># we want to bring infrastructure to desired state</span></pre>
+    
+    <div class="info-box warning">
+        <div class="info-box-title">⚠️ Important</div>
+        <code>tofu refresh</code> only updates the state file. It does NOT change your infrastructure. Use refresh when you want to update state to match reality without reverting infrastructure changes.
+    </div>
+
+    <!-- Section 6 -->
+    <div class="page-break"></div>
+    <h1 id="section6">Section 6: Detect Drift with Spacelift</h1>
+    
+    <div class="step-header">STEP 6: CONFIGURE SPACELIFT DRIFT DETECTION</div>
+    
+    <h2>6.1 Spacelift Drift Detection Benefits</h2>
+    <p>Spacelift provides automated drift detection with:</p>
+    <ol>
+        <li>Scheduled drift detection runs (hourly, daily, weekly)</li>
+        <li>Automatic reconciliation options</li>
+        <li>Drift notifications via Slack, email, or webhooks</li>
+        <li>Drift history and audit trail</li>
+        <li>Policy-based drift handling</li>
+    </ol>
+    
+    <h2>6.2 Create Stack in Spacelift (UI Method)</h2>
+    <p>Follow these steps to create the stack:</p>
+    <ol>
+        <li>Push your code to GitHub</li>
+        <li>Navigate to Stacks in Spacelift</li>
+        <li>Click "Create Stack"</li>
+        <li>Configure stack settings as shown below</li>
+    </ol>
+    
+    <table>
+        <thead>
+            <tr>
+                <th>Setting</th>
+                <th>Value</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td>Name</td><td>drift-detection-lab</td></tr>
+            <tr><td>Repository</td><td>drift-detection-lab</td></tr>
+            <tr><td>Branch</td><td>main</td></tr>
+            <tr><td>Project Root</td><td>stacks/drift-lab</td></tr>
+            <tr><td>Workflow Tool</td><td>OpenTofu</td></tr>
+            <tr><td>Manage State</td><td>Enabled</td></tr>
+        </tbody>
+    </table>
+    
+    <h2>6.3 Enable Drift Detection</h2>
+    <p>Configure drift detection in stack settings:</p>
+    <ol>
+        <li>Go to Stack Settings > Behavior</li>
+        <li>Find "Drift Detection" section</li>
+        <li>Enable "Schedule drift detection"</li>
+        <li>Set schedule (e.g., "0 */4 * * *" for every 4 hours)</li>
+        <li>Optionally enable "Auto-reconcile" for automatic fixes</li>
+    </ol>
+    
+    <h2>6.4 Configure via OpenTofu (Admin Stack)</h2>
+    <p>Alternatively, manage drift detection as code:</p>
+    
+    <div class="code-title">admin/drift-stack.tf</div>
+    <pre><span class="comment"># admin/drift-stack.tf</span>
+<span class="comment"># Manage drift detection lab stack via OpenTofu</span>
+
+<span class="keyword">resource</span> <span class="string">"spacelift_stack"</span> <span class="string">"drift_lab"</span> {
+  name        = <span class="string">"drift-detection-lab"</span>
+  description = <span class="string">"Lab environment for drift detection training"</span>
+  
+  repository   = <span class="string">"drift-detection-lab"</span>
+  branch       = <span class="string">"main"</span>
+  project_root = <span class="string">"stacks/drift-lab"</span>
+  
+  <span class="comment"># Use OpenTofu</span>
+  terraform_workflow_tool = <span class="string">"OPEN_TOFU"</span>
+  
+  <span class="comment"># Enable state management</span>
+  manage_state = true
+  
+  <span class="comment"># Labels for organization</span>
+  labels = [<span class="string">"training"</span>, <span class="string">"drift-detection"</span>, <span class="string">"lab"</span>]
+}
+
+<span class="comment"># Configure Drift Detection</span>
+<span class="keyword">resource</span> <span class="string">"spacelift_drift_detection"</span> <span class="string">"drift_lab"</span> {
+  stack_id = spacelift_stack.drift_lab.id
+  
+  <span class="comment"># Run drift detection every 4 hours</span>
+  schedule = [<span class="string">"0 */4 * * *"</span>]
+  
+  <span class="comment"># Reconcile drift automatically (use with caution!)</span>
+  reconcile = false
+  
+  <span class="comment"># Ignore specific runs from triggering alerts</span>
+  ignore_state = false
+  
+  <span class="comment"># Timezone for schedule</span>
+  timezone = <span class="string">"UTC"</span>
+}</pre>
+    
+    <div class="info-box warning">
+        <div class="info-box-title">⚠️ Auto-Reconcile Caution</div>
+        The <code>reconcile = true</code> setting will automatically apply changes to fix drift. Use this only in environments where automated changes are acceptable. For production, keep <code>reconcile = false</code> and review changes manually.
+    </div>
+    
+    <h2>6.5 Trigger Manual Drift Detection</h2>
+    <p>To test drift detection immediately:</p>
+    <ol>
+        <li>Navigate to your stack in Spacelift</li>
+        <li>Click "Trigger" button</li>
+        <li>Select "Detect drift" option</li>
+        <li>Wait for the run to complete</li>
+        <li>Review the drift report</li>
+    </ol>
+    
+    <h2>6.6 Understanding Spacelift Drift Reports</h2>
+    <p>The Spacelift drift detection run shows:</p>
+    <table>
+        <thead>
+            <tr>
+                <th>Element</th>
+                <th>Description</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td>Drift Status</td><td>DRIFTED or NO DRIFT indicator</td></tr>
+            <tr><td>Resources Changed</td><td>Count of resources with drift</td></tr>
+            <tr><td>Plan Output</td><td>Full plan showing required changes</td></tr>
+            <tr><td>Timestamps</td><td>When drift was detected</td></tr>
+            <tr><td>Run ID</td><td>Unique identifier for audit trail</td></tr>
+        </tbody>
+    </table>
+    
+    <div class="info-box tip">
+        <div class="info-box-title">💡 Drift Notifications</div>
+        Configure notifications in Spacelift to alert your team when drift is detected. Go to Settings > Notifications to set up Slack, email, or webhook integrations.
+    </div>
+
+    <!-- Section 7 -->
+    <div class="page-break"></div>
+    <h1 id="section7">Section 7: Resolve Drift - Multiple Strategies</h1>
+    
+    <p>There are several strategies for resolving infrastructure drift. The right approach depends on your situation and the nature of the drift.</p>
+    
+    <h2>7.1 Strategy Overview</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Strategy</th>
+                <th>When to Use</th>
+                <th>Command</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Reconcile (Apply)</strong></td>
+                <td>Manual changes were wrong, revert to IaC</td>
+                <td><code>tofu apply</code></td>
+            </tr>
+            <tr>
+                <td><strong>Accept (Update Config)</strong></td>
+                <td>Manual changes were correct, update IaC</td>
+                <td>Edit .tf files + apply</td>
+            </tr>
+            <tr>
+                <td><strong>Import</strong></td>
+                <td>Resource exists but not in state</td>
+                <td><code>tofu import</code></td>
+            </tr>
+            <tr>
+                <td><strong>Refresh Only</strong></td>
+                <td>State is stale, infrastructure is correct</td>
+                <td><code>tofu refresh</code></td>
+            </tr>
+        </tbody>
+    </table>
+    
+    <div class="step-header">STEP 7: STRATEGY 1 - RECONCILE (REVERT DRIFT)</div>
+    
+    <h2>7.2 Reconcile the Security Group</h2>
+    <p>The unauthorized SSH rule (0.0.0.0/0) is a security risk. We will revert this drift by applying our desired configuration:</p>
+    
+    <div class="code-title">Terminal</div>
+    <pre><span class="comment"># First, review what will change</span>
+tofu plan
+
+<span class="comment"># Apply to reconcile - this removes the unauthorized rule</span>
+tofu apply
+
+<span class="comment"># When prompted, type 'yes' to confirm</span>
+
+<span class="comment"># Verify the unauthorized rule is removed</span>
+SG_ID=$(tofu output -raw security_group_id)
+aws ec2 describe-security-groups \
+  --group-ids $SG_ID \
+  --query "SecurityGroups[0].IpPermissions"</pre>
+    
+    <div class="info-box success">
+        <div class="info-box-title">💡 Security Restored</div>
+        The <code>tofu apply</code> command removed the unauthorized 0.0.0.0/0 SSH rule and restored the secure 10.0.0.0/8 restriction. This is the most common drift resolution for security-related changes.
+    </div>
+    
+    <div class="step-header">STEP 8: STRATEGY 2 - ACCEPT DRIFT (UPDATE CONFIGURATION)</div>
+    
+    <h2>7.3 Accept the Manual Tag</h2>
+    <p>Sometimes manual changes are valid and should be incorporated into your IaC. Let's say the ManualChange tag is actually useful for tracking:</p>
+    
+    <div class="code-title">Terminal</div>
+    <pre><span class="comment"># First, introduce the drift again for this exercise</span>
+BUCKET_NAME=$(tofu output -raw bucket_name)
+aws s3api put-bucket-tagging \
+  --bucket $BUCKET_NAME \
+  --tagging 'TagSet=[{Key=Name,Value=Drift Detection Demo Bucket},{Key=Purpose,Value=Training},{Key=CostCenter,Value=Training-001},{Key=ChangeHistory,Value=Manual-2024-01}]'
+
+<span class="comment"># Verify drift exists</span>
+tofu plan</pre>
+    
+    <h2>7.4 Update Configuration to Accept Change</h2>
+    <p>Modify main.tf to include the new tag:</p>
+    
+    <div class="code-title">stacks/drift-lab/main.tf (updated)</div>
+    <pre><span class="comment"># Update the S3 bucket resource in main.tf</span>
+<span class="keyword">resource</span> <span class="string">"aws_s3_bucket"</span> <span class="string">"demo"</span> {
+  bucket = <span class="string">"${var.bucket_prefix}-${random_id.suffix.hex}"</span>
+  
+  tags = {
+    Name          = <span class="string">"Drift Detection Demo Bucket"</span>
+    Purpose       = <span class="string">"Training"</span>
+    CostCenter    = <span class="string">"Training-001"</span>
+    ChangeHistory = <span class="string">"Manual-2024-01"</span>  <span class="comment"># Accepted from drift</span>
+  }
+}</pre>
+    
+    <div class="code-title">Terminal</div>
+    <pre><span class="comment"># Now plan shows no drift for this resource</span>
+tofu plan
+
+<span class="comment"># Apply to sync state with configuration</span>
+tofu apply -auto-approve</pre>
+    
+    <div class="step-header">STEP 9: STRATEGY 3 - IMPORT EXISTING RESOURCES</div>
+    
+    <h2>7.5 Understanding tofu import</h2>
+    <p>The import command brings existing infrastructure into OpenTofu management. This is useful when resources were created outside of IaC or when state is lost.</p>
+    
+    <div class="code-title">Terminal</div>
+    <pre><span class="comment"># Example: Import an existing S3 bucket</span>
+<span class="comment"># First, add the resource block to your configuration</span>
+
+<span class="comment"># Then import:</span>
+<span class="comment"># tofu import aws_s3_bucket.example bucket-name</span>
+
+<span class="comment"># For our lab, let's demonstrate with a new resource</span>
+<span class="comment"># Create a bucket manually first</span>
+aws s3 mb s3://import-demo-$(date +%s) --region us-east-1
+
+<span class="comment"># Note the bucket name for import</span></pre>
+    
+    <h2>7.6 Import Block (OpenTofu 1.7+)</h2>
+    <p>OpenTofu 1.7+ supports declarative imports using import blocks:</p>
+    
+    <div class="code-title">import.tf</div>
+    <pre><span class="comment"># import.tf</span>
+<span class="comment"># Declarative import for existing resources</span>
+
+<span class="keyword">import</span> {
+  to = aws_s3_bucket.imported
+  id = <span class="string">"import-demo-1234567890"</span>  <span class="comment"># Replace with actual bucket name</span>
+}
+
+<span class="comment"># The resource block must also exist</span>
+<span class="keyword">resource</span> <span class="string">"aws_s3_bucket"</span> <span class="string">"imported"</span> {
+  bucket = <span class="string">"import-demo-1234567890"</span>
+  
+  tags = {
+    Name      = <span class="string">"Imported Bucket"</span>
+    ManagedBy = <span class="string">"OpenTofu"</span>
+  }
+}</pre>
+    
+    <div class="code-title">Terminal</div>
+    <pre><span class="comment"># Run plan to see the import</span>
+tofu plan
+
+<span class="comment"># Apply to perform the import</span>
+tofu apply
+
+<span class="comment"># The resource is now managed by OpenTofu</span></pre>
+    
+    <div class="step-header">STEP 10: STRATEGY 4 - REFRESH STATE</div>
+    
+    <h2>7.7 When to Use Refresh</h2>
+    <p>Use <code>tofu refresh</code> when you want to update the state file without changing infrastructure. Common scenarios include updating state after external changes that should be preserved, or synchronizing state with auto-scaling changes.</p>
+    
+    <div class="code-title">Terminal</div>
+    <pre><span class="comment"># Update state to match current infrastructure</span>
+tofu refresh
+
+<span class="comment"># Verify state was updated</span>
+tofu show
+
+<span class="comment"># Note: This doesn't change infrastructure</span>
+<span class="comment"># It only updates the state file</span></pre>
+    
+    <div class="info-box warning">
+        <div class="info-box-title">⚠️ Refresh Carefully</div>
+        After refresh, your state reflects actual infrastructure. If you then run apply without configuration changes, OpenTofu will attempt to revert infrastructure to match your configuration.
+    </div>
+
+    <!-- Section 8 -->
+    <div class="page-break"></div>
+    <h1 id="section8">Section 8: Prevent Future Drift</h1>
+    
+    <h2>8.1 Preventive Measures</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Measure</th>
+                <th>Implementation</th>
+                <th>Effectiveness</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>IAM Restrictions</td>
+                <td>Limit console/CLI access to resources</td>
+                <td>High</td>
+            </tr>
+            <tr>
+                <td>Scheduled Detection</td>
+                <td>Regular automated drift checks</td>
+                <td>High</td>
+            </tr>
+            <tr>
+                <td>Resource Tagging</td>
+                <td>Tag resources as IaC-managed</td>
+                <td>Medium</td>
+            </tr>
+            <tr>
+                <td>Policy-as-Code</td>
+                <td>OPA policies to detect manual changes</td>
+                <td>High</td>
+            </tr>
+            <tr>
+                <td>Training</td>
+                <td>Educate teams on IaC workflows</td>
+                <td>Medium</td>
+            </tr>
+        </tbody>
+    </table>
+    
+    <h2>8.2 IAM Policy to Prevent Manual Changes</h2>
+    <p>Restrict manual modifications to IaC-managed resources:</p>
+    
+    <div class="code-title">iam-policy.json</div>
+    <pre>{
+  <span class="string">"Version"</span>: <span class="string">"2012-10-17"</span>,
+  <span class="string">"Statement"</span>: [
+    {
+      <span class="string">"Sid"</span>: <span class="string">"DenyManualModification"</span>,
+      <span class="string">"Effect"</span>: <span class="string">"Deny"</span>,
+      <span class="string">"Action"</span>: [
+        <span class="string">"s3:PutBucketTagging"</span>,
+        <span class="string">"s3:PutBucketVersioning"</span>,
+        <span class="string">"ec2:AuthorizeSecurityGroupIngress"</span>,
+        <span class="string">"ec2:RevokeSecurityGroupIngress"</span>
+      ],
+      <span class="string">"Resource"</span>: <span class="string">"*"</span>,
+      <span class="string">"Condition"</span>: {
+        <span class="string">"StringEquals"</span>: {
+          <span class="string">"aws:ResourceTag/ManagedBy"</span>: <span class="string">"OpenTofu"</span>
+        },
+        <span class="string">"StringNotLike"</span>: {
+          <span class="string">"aws:PrincipalArn"</span>: <span class="string">"arn:aws:iam::*:role/spacelift-*"</span>
+        }
+      }
+    }
+  ]
+}</pre>
+    
+    <h2>8.3 OPA Policy for Drift Alerts</h2>
+    <p>Create a Spacelift policy to alert on specific drift types:</p>
+    
+    <div class="code-title">policies/drift-alert.rego</div>
+    <pre><span class="comment"># drift-alert.rego</span>
+<span class="comment"># Alert on security-related drift</span>
+
+<span class="keyword">package</span> spacelift
+
+<span class="comment"># Deny runs with security group drift without approval</span>
+<span class="keyword">warn</span>[<span class="string">"Security group drift detected - review required"</span>] {
+  input.spacelift.run.type == <span class="string">"DRIFT_DETECTION"</span>
+  resource := input.terraform.resource_changes[_]
+  resource.type == <span class="string">"aws_security_group"</span>
+  resource.change.actions[_] == <span class="string">"update"</span>
+}
+
+<span class="comment"># Warn on any S3 versioning changes</span>
+<span class="keyword">warn</span>[<span class="string">"S3 versioning drift detected"</span>] {
+  input.spacelift.run.type == <span class="string">"DRIFT_DETECTION"</span>
+  resource := input.terraform.resource_changes[_]
+  resource.type == <span class="string">"aws_s3_bucket_versioning"</span>
+}</pre>
+    
+    <h2>8.4 Spacelift Notification Configuration</h2>
+    <div class="code-title">admin/notifications.tf</div>
+    <pre><span class="comment"># admin/notifications.tf</span>
+<span class="comment"># Configure drift notifications</span>
+
+<span class="keyword">resource</span> <span class="string">"spacelift_webhook"</span> <span class="string">"drift_alerts"</span> {
+  endpoint = <span class="string">"https://hooks.slack.com/services/YOUR/WEBHOOK/URL"</span>
+  enabled  = true
+  
+  <span class="comment"># Only trigger on drift detection runs</span>
+  labels = [<span class="string">"drift-detection"</span>]
+}
+
+<span class="comment"># Slack integration for drift alerts</span>
+<span class="keyword">resource</span> <span class="string">"spacelift_slack_integration"</span> <span class="string">"drift_channel"</span> {
+  name        = <span class="string">"drift-alerts"</span>
+  webhook_url = <span class="string">"https://hooks.slack.com/services/YOUR/WEBHOOK/URL"</span>
+  channel     = <span class="string">"#infrastructure-alerts"</span>
+  
+  <span class="comment"># Notification events</span>
+  run_state_changed = true
+}</pre>
+
+    <!-- Section 9 -->
+    <div class="page-break"></div>
+    <h1 id="section9">Section 9: Troubleshooting Guide</h1>
+    
+    <h2>9.1 Plan Shows No Changes But Drift Exists</h2>
+    <p><strong>Symptom:</strong> You know resources changed but <code>tofu plan</code> shows no changes.</p>
+    
+    <div class="code-title">Solutions</div>
+    <pre><span class="comment"># 1. Refresh state first</span>
+tofu refresh
+
+<span class="comment"># 2. Clear cached providers</span>
+rm -rf .terraform
+tofu init
+
+<span class="comment"># 3. Check if resource is in state</span>
+tofu state list | grep resource_name
+
+<span class="comment"># 4. Verify provider configuration</span>
+tofu providers</pre>
+    
+    <h2>9.2 State Lock Errors</h2>
+    <p><strong>Symptom:</strong> Error acquiring state lock</p>
+    
+    <div class="code-title">Solutions</div>
+    <pre><span class="comment"># Check who holds the lock (DynamoDB backend)</span>
+aws dynamodb scan \
+  --table-name terraform-locks \
+  --filter-expression "LockID = :lockid" \
+  --expression-attribute-values '{":lockid":{"S":"your-state-path"}}'
+
+<span class="comment"># Force unlock (use with extreme caution!)</span>
+tofu force-unlock LOCK_ID
+
+<span class="comment"># Better: Wait for the other process to complete</span></pre>
+    
+    <h2>9.3 Import Fails with Resource Not Found</h2>
+    <p><strong>Symptom:</strong> <code>tofu import</code> can't find the resource</p>
+    
+    <div class="code-title">Solutions</div>
+    <pre><span class="comment"># 1. Verify resource ID format</span>
+<span class="comment"># S3 buckets use bucket name</span>
+tofu import aws_s3_bucket.example bucket-name
+
+<span class="comment"># EC2 security groups use sg-xxx ID</span>
+tofu import aws_security_group.example sg-0123456789abcdef
+
+<span class="comment"># 2. Check AWS region</span>
+export AWS_REGION=us-east-1
+tofu import ...
+
+<span class="comment"># 3. Verify resource exists</span>
+aws s3api head-bucket --bucket bucket-name</pre>
+    
+    <h2>9.4 Spacelift Drift Detection Not Running</h2>
+    <p><strong>Symptom:</strong> Scheduled drift detection not triggering</p>
+    <table>
+        <thead>
+            <tr>
+                <th>Check</th>
+                <th>Solution</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td>Stack State</td><td>Ensure stack is not paused or disabled</td></tr>
+            <tr><td>Schedule Syntax</td><td>Verify cron expression is valid</td></tr>
+            <tr><td>Cloud Integration</td><td>Confirm AWS credentials are valid</td></tr>
+            <tr><td>Stack Dependencies</td><td>Check if stack is blocked by dependency</td></tr>
+        </tbody>
+    </table>
+    
+    <h2>9.5 False Positive Drift Detection</h2>
+    <p><strong>Symptom:</strong> Plan shows changes that aren't real drift</p>
+    
+    <div class="code-title">Common Causes and Solutions</div>
+    <pre><span class="comment"># 1. Provider version mismatch</span>
+<span class="comment"># Lock provider versions in versions.tf</span>
+required_providers {
+  aws = {
+    source  = <span class="string">"hashicorp/aws"</span>
+    version = <span class="string">"5.31.0"</span>  <span class="comment"># Exact version</span>
+  }
+}
+
+<span class="comment"># 2. Lifecycle ignore_changes</span>
+<span class="keyword">resource</span> <span class="string">"aws_instance"</span> <span class="string">"example"</span> {
+  <span class="comment"># Ignore changes to tags made outside OpenTofu</span>
+  lifecycle {
+    ignore_changes = [tags[<span class="string">"LastModified"</span>]]
+  }
+}
+
+<span class="comment"># 3. Computed values changing</span>
+<span class="comment"># Some attributes are computed on every read</span>
+<span class="comment"># Check if the "drift" is actually expected</span></pre>
+
+    <!-- Section 10 -->
+    <div class="page-break"></div>
+    <h1 id="section10">Section 10: Best Practices and Next Steps</h1>
+    
+    <h2>10.1 Drift Detection Best Practices</h2>
+    
+    <h3>Detection</h3>
+    <ol>
+        <li>Schedule drift detection at least daily for production environments</li>
+        <li>Configure alerts for critical resources (security groups, IAM, encryption)</li>
+        <li>Maintain an audit log of all drift detection runs</li>
+        <li>Document expected drift patterns (auto-scaling, etc.)</li>
+    </ol>
+    
+    <h3>Resolution</h3>
+    <ol>
+        <li>Always investigate root cause before resolving drift</li>
+        <li>Document why drift occurred and how it was resolved</li>
+        <li>Use lifecycle blocks for expected variability</li>
+        <li>Test drift resolution in non-production first</li>
+    </ol>
+    
+    <h3>Prevention</h3>
+    <ol>
+        <li>Restrict direct access to IaC-managed resources</li>
+        <li>Establish clear emergency change procedures that include IaC updates</li>
+        <li>Train all team members on proper IaC workflows</li>
+        <li>Use policy-as-code to enforce compliance</li>
+    </ol>
+    
+    <h2>10.2 Recommended Next Steps</h2>
+    <p>Continue your learning with these advanced topics:</p>
+    <ul class="checklist">
+        <li>Implement cross-account drift detection strategies</li>
+        <li>Create custom OPA policies for drift governance</li>
+        <li>Set up comprehensive alerting with PagerDuty/Slack integration</li>
+        <li>Explore drift detection for complex resources (EKS, RDS)</li>
+        <li>Practice incident response scenarios with drift</li>
+        <li>Implement GitOps workflows to minimize drift opportunities</li>
+    </ul>
+    
+    <h2>10.3 Lab Cleanup</h2>
+    <p>Clean up the lab resources to avoid charges:</p>
+    
+    <div class="code-title">Terminal</div>
+    <pre><span class="comment"># Navigate to stack directory</span>
+cd stacks/drift-lab
+
+<span class="comment"># Destroy all resources</span>
+tofu destroy -auto-approve
+
+<span class="comment"># Verify cleanup</span>
+aws s3 ls | grep drift-lab
+aws ec2 describe-security-groups --filters "Name=group-name,Values=drift-demo-sg-*"
+
+<span class="comment"># Remove Spacelift stack (if created)</span>
+<span class="comment"># Via UI: Delete stack from Spacelift console</span>
+<span class="comment"># Via OpenTofu: tofu destroy (in admin stack)</span></pre>
+    
+    <div class="congrats">
+        <h2>🎉 Congratulations!</h2>
+        <p>You have completed the OpenTofu Drift Detection lab. You now know how to detect, analyze, resolve, and prevent infrastructure drift using both OpenTofu CLI and Spacelift.</p>
+    </div>
+
+    <!-- Quick Reference -->
+    <div class="page-break"></div>
+    <h1 id="quickref">Quick Reference Card</h1>
+    
+    <h2>Essential Commands</h2>
+    <div class="code-title">Drift Detection Commands</div>
+    <pre><span class="comment"># Detect drift (shows plan)</span>
+tofu plan
+
+<span class="comment"># Detect drift with exit code</span>
+tofu plan -detailed-exitcode
+<span class="comment"># 0 = No changes, 1 = Error, 2 = Changes/drift detected</span>
+
+<span class="comment"># Refresh state from infrastructure</span>
+tofu refresh
+
+<span class="comment"># Apply to reconcile drift</span>
+tofu apply
+
+<span class="comment"># Import existing resource</span>
+tofu import &lt;resource_type&gt;.&lt;name&gt; &lt;resource_id&gt;
+
+<span class="comment"># View current state</span>
+tofu show
+
+<span class="comment"># List resources in state</span>
+tofu state list</pre>
+    
+    <h2>Drift Resolution Decision Tree</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Question</th>
+                <th>Yes Action</th>
+                <th>No Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Was the change intentional?</td>
+                <td>Update IaC config</td>
+                <td>Run <code>tofu apply</code></td>
+            </tr>
+            <tr>
+                <td>Is the change correct?</td>
+                <td>Accept and document</td>
+                <td>Revert with apply</td>
+            </tr>
+            <tr>
+                <td>Is resource in state?</td>
+                <td>Plan/apply to fix</td>
+                <td>Import first</td>
+            </tr>
+            <tr>
+                <td>Is it a security issue?</td>
+                <td>Fix immediately</td>
+                <td>Schedule remediation</td>
+            </tr>
+        </tbody>
+    </table>
+    
+    <h2>Spacelift Drift Detection Schedule Examples</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Frequency</th>
+                <th>Cron Expression</th>
+                <th>Use Case</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td>Every hour</td><td><code>0 * * * *</code></td><td>High-sensitivity production</td></tr>
+            <tr><td>Every 4 hours</td><td><code>0 */4 * * *</code></td><td>Standard production</td></tr>
+            <tr><td>Daily at 6 AM</td><td><code>0 6 * * *</code></td><td>Development environments</td></tr>
+            <tr><td>Weekly Monday 9 AM</td><td><code>0 9 * * 1</code></td><td>Low-change environments</td></tr>
+        </tbody>
+    </table>
+    
+    <h2>Common Resource Import IDs</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Resource Type</th>
+                <th>Import ID Format</th>
+                <th>Example</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td>aws_s3_bucket</td><td>bucket-name</td><td>my-bucket</td></tr>
+            <tr><td>aws_security_group</td><td>sg-xxxxx</td><td>sg-0123456789</td></tr>
+            <tr><td>aws_instance</td><td>i-xxxxx</td><td>i-0123456789</td></tr>
+            <tr><td>aws_vpc</td><td>vpc-xxxxx</td><td>vpc-0123456789</td></tr>
+            <tr><td>aws_iam_role</td><td>role-name</td><td>my-role</td></tr>
+        </tbody>
+    </table>
+    
+    <h2>Key URLs</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Resource</th>
+                <th>URL</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td>OpenTofu Docs</td><td>https://opentofu.org/docs</td></tr>
+            <tr><td>Spacelift Docs</td><td>https://docs.spacelift.io</td></tr>
+            <tr><td>AWS Provider</td><td>https://registry.terraform.io/providers/hashicorp/aws</td></tr>
+            <tr><td>OPA (Rego)</td><td>https://www.openpolicyagent.org/docs</td></tr>
+        </tbody>
+    </table>
+
+    <script>
+        // Disable keyboard shortcuts for copying
+        document.addEventListener('keydown', function(e) {
+            // Allow Ctrl+C only in code blocks
+            if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+                const selection = window.getSelection();
+                const selectedNode = selection.anchorNode?.parentElement;
+                if (!selectedNode?.closest('pre') && !selectedNode?.closest('code')) {
+                    e.preventDefault();
+                }
+            }
+            // Disable Ctrl+P (print), Ctrl+S (save)
+            if ((e.ctrlKey || e.metaKey) && (e.key === 'p' || e.key === 's')) {
+                e.preventDefault();
+            }
+        });
+
+        // Disable drag
+        document.addEventListener('dragstart', function(e) {
+            e.preventDefault();
+        });
+    </script>
+</body>
+</html>
