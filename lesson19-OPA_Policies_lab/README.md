@@ -129,4 +129,19 @@ opa fmt -w .
 # Evaluate against plan
 opa eval --data . --input plan.json "data.terraform.deny"
 
+####################################################################
+cd infrastructure
 
+# Initialize
+tofu init
+
+# Generate plan
+tofu plan -out=tfplan.binary
+
+# Convert to JSON
+tofu show -json tfplan.binary > tfplan.json
+
+# Preview plan structure
+jq '.resource_changes[].type' tfplan.json | sort | uniq -c
+
+####################################################################

@@ -6,7 +6,10 @@ resource "aws_vpc" "main" {
 
   # ⚠️ VIOLATION: Missing required tags
   tags = {
-    Name = "${var.project_name}-vpc"
+    Name        = "${var.project_name}-vpc"
+    Environment = var.environment
+    Owner       = "platform-team"
+    CostCenter  = "engineering"
   }
 }
 
@@ -19,8 +22,10 @@ resource "aws_subnet" "public" {
 
   # ⚠️ VIOLATION: Missing Environment tag
   tags = {
-    Name  = "${var.project_name}-public-subnet"
-    Owner = "platform-team"
+    Name        = "${var.project_name}-public-subnet"
+    Environment = var.environment
+    Owner       = "platform-team"
+    CostCenter  = "engineering"
   }
 }
 

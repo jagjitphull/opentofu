@@ -30,7 +30,7 @@ Before starting this lab, ensure you have:
  Permissions to create VPC, EC2, and security group resources
  Network connectivity to AWS
 
- mkdir provisioners-lab
+mkdir provisioners-lab
 cd provisioners-lab
 
 provisioners-lab/

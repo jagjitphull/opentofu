@@ -1,0 +1,626 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Spacelift Drift Detection Demo (AWS EC2 + OpenTofu) — Hands-on Lab</title>
+  <style>
+    :root{
+      --bg:#0b1020; --card:#121a33; --muted:#a9b3d1; --text:#e9ecff;
+      --accent:#7aa2ff; --accent2:#55f3c2; --warn:#ffd36a; --bad:#ff6b7a; --ok:#5cff8d;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+    }
+    body{margin:0; font-family:var(--sans); background:radial-gradient(1200px 600px at 20% -10%, #18245a 0, transparent 60%),
+                                      radial-gradient(1000px 500px at 90% 0%, #0f3c3a 0, transparent 55%),
+                                      var(--bg);
+         color:var(--text); line-height:1.55;}
+    header{padding:28px 18px 18px; max-width:1050px; margin:0 auto;}
+    h1{font-size:28px; margin:0 0 8px;}
+    .sub{color:var(--muted); margin:0; max-width:900px;}
+    .wrap{max-width:1050px; margin:0 auto; padding:0 18px 40px;}
+    .grid{display:grid; grid-template-columns: 1.4fr 0.6fr; gap:14px;}
+    @media (max-width: 980px){ .grid{grid-template-columns:1fr;} }
+    .card{background:rgba(18,26,51,0.82); border:1px solid rgba(122,162,255,0.22);
+          border-radius:16px; padding:16px 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.35);}
+    h2{margin:0 0 10px; font-size:20px;}
+    h3{margin:18px 0 8px; font-size:16px;}
+    .pill{display:inline-block; font-size:12px; padding:4px 10px; border-radius:999px;
+          border:1px solid rgba(122,162,255,0.35); color:var(--muted); margin-right:8px;}
+    .note{border-left:4px solid var(--accent2); padding:10px 12px; background:rgba(85,243,194,0.08);
+          border-radius:10px; color:var(--text); margin:10px 0;}
+    .warn{border-left:4px solid var(--warn); background:rgba(255,211,106,0.10);}
+    .bad{border-left:4px solid var(--bad); background:rgba(255,107,122,0.10);}
+    ul{margin:8px 0 0 18px;}
+    code, pre{font-family:var(--mono);}
+    pre{background:#0a0f22; border:1px solid rgba(122,162,255,0.25); padding:12px; border-radius:12px;
+        overflow:auto; margin:10px 0;}
+    .step{padding:12px 12px; border:1px dashed rgba(169,179,209,0.35); border-radius:14px; margin:10px 0;}
+    .step b{color:var(--accent2);}
+    .k{color:var(--accent);}
+    .small{font-size:13px; color:var(--muted);}
+    .toc a{color:var(--text); text-decoration:none; border-bottom:1px dotted rgba(233,236,255,0.3);}
+    .toc a:hover{border-bottom-color:var(--accent2);}
+    .hr{height:1px; background:rgba(169,179,209,0.18); margin:14px 0;}
+    .okline{color:var(--ok);}
+    .badline{color:var(--bad);}
+  </style>
+</head>
+
+<body>
+<header>
+  <span class="pill">Lab</span>
+  <span class="pill">Spacelift</span>
+  <span class="pill">Drift Detection</span>
+  <span class="pill">AWS EC2</span>
+  <span class="pill">OpenTofu</span>
+  <h1>Spacelift Drift Demo: Detect & Reconcile Drift on an AWS EC2 Instance (OpenTofu)</h1>
+  <p class="sub">
+    This lab teaches trainees how drift happens, how Spacelift detects it on a schedule, and how to reconcile it safely
+    using GitOps workflows. You will deploy a tiny EC2 instance, introduce drift by changing a tag in AWS Console,
+    and watch Spacelift flag and fix it.
+  </p>
+</header>
+
+<div class="wrap">
+  <div class="grid">
+    <section class="card">
+      <h2 id="toc">Table of Contents</h2>
+      <div class="toc small">
+        <ul>
+          <li><a href="#outcomes">Outcomes</a></li>
+          <li><a href="#architecture">What’s happening under the hood</a></li>
+          <li><a href="#prereqs">Prerequisites & cost safety</a></li>
+          <li><a href="#repo">Create the OpenTofu repo (EC2)</a></li>
+          <li><a href="#aws-integration">AWS Integration in Spacelift (AssumeRole)</a></li>
+          <li><a href="#stack">Create a Spacelift Stack & first run</a></li>
+          <li><a href="#schedule">Enable Drift Detection schedule</a></li>
+          <li><a href="#drift">Introduce Drift (manual change in AWS)</a></li>
+          <li><a href="#observe">Observe Drift detection results</a></li>
+          <li><a href="#reconcile">Reconcile options (manual vs auto)</a></li>
+          <li><a href="#troubleshoot">Troubleshooting</a></li>
+          <li><a href="#cleanup">Cleanup</a></li>
+          <li><a href="#extensions">Optional extensions (advanced)</a></li>
+        </ul>
+      </div>
+
+      <div class="hr"></div>
+
+      <h2 id="outcomes">Outcomes</h2>
+      <ul>
+        <li>Create an EC2 instance using OpenTofu and push it to Git.</li>
+        <li>Run OpenTofu via Spacelift (plan/apply).</li>
+        <li>Configure scheduled drift detection in Spacelift.</li>
+        <li>Introduce drift via AWS Console and see Spacelift detect it.</li>
+        <li>Reconcile drift (choose safe remediation mode).</li>
+      </ul>
+
+      <div class="note warn">
+        <b>Cost safety:</b> Use a small instance type and <b>destroy everything</b> at the end of the lab.
+        In most regions, a single <code>t3.micro</code> for a short lab is low cost, but always verify in your AWS billing.
+      </div>
+    </section>
+
+    <aside class="card">
+      <h2>Quick Reference</h2>
+      <div class="small">
+        <p><b>Drift</b> = real cloud resources differ from IaC state/config.</p>
+        <p><b>Drift detection</b> = scheduled “plan-like” run that compares desired vs real.</p>
+        <p><b>Reconciliation</b> = an apply run that brings infra back to desired.</p>
+      </div>
+      <div class="note">
+        <b>Tip:</b> For a clean drift demo, change a <b>tag</b> in AWS Console.
+        Tag drift shows clearly and usually does not require replacement.
+      </div>
+      <div class="note bad">
+        <b>Avoid:</b> Changing EC2 instance type for the first demo. It may require stop/restart or replacement and can confuse beginners.
+      </div>
+    </aside>
+  </div>
+
+  <section class="card" id="architecture">
+    <h2>What’s happening under the hood</h2>
+    <ul>
+      <li>You commit OpenTofu code to a Git repo.</li>
+      <li>Spacelift connects to the repo and runs <code>tofu init/plan/apply</code> in a runner.</li>
+      <li>You set a <b>drift detection schedule</b> on the stack.</li>
+      <li>At schedule time, Spacelift runs a “plan-like” action and highlights differences between:
+        <ul>
+          <li>What your code/state says should exist</li>
+          <li>What AWS actually has right now</li>
+        </ul>
+      </li>
+      <li>If configured, Spacelift can create reconciliation runs to fix detected drift.</li>
+    </ul>
+  </section>
+
+  <section class="card" id="prereqs">
+    <h2>Prerequisites & cost safety</h2>
+
+    <h3>Accounts / Access</h3>
+    <ul>
+      <li>AWS account with permissions to create EC2 resources (instance, security group, key pair optional).</li>
+      <li>Spacelift account and permission to create: integrations + stacks.</li>
+      <li>Git repository (GitHub/GitLab/Bitbucket) connected to Spacelift.</li>
+    </ul>
+
+    <h3>Recommended settings</h3>
+    <ul>
+      <li>Region: pick one close to you (example: <code>ap-south-1</code>).</li>
+      <li>Instance type: <code>t3.micro</code> (or free-tier equivalent if eligible).</li>
+      <li>OS: Amazon Linux 2023 or Ubuntu (we’ll auto-pick an AMI).</li>
+    </ul>
+
+    <div class="note warn">
+      <b>Security:</b> This lab opens SSH (22) from your IP in a controlled way.
+      If your org policy doesn’t allow inbound SSH, skip the SSH rule and keep only egress.
+    </div>
+  </section>
+
+  <section class="card" id="repo">
+    <h2>Create the OpenTofu repo (EC2)</h2>
+    <p class="small">Create a new repo named: <code>spacelift-drift-ec2-lab</code> and add the following files.</p>
+
+    <div class="step">
+      <b>Step 1 — Create file: <code>main.tf</code></b>
+      <pre><code>terraform {
+  required_version = ">= 1.5.0"
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~&gt; 5.0"
+    }
+  }
+}
+
+provider "aws" {
+  region = var.aws_region
+}
+
+# Grab default VPC + a default subnet to keep the lab simple
+data "aws_vpc" "default" {
+  default = true
+}
+
+data "aws_subnets" "default" {
+  filter {
+    name   = "vpc-id"
+    values = [data.aws_vpc.default.id]
+  }
+}
+
+# Latest Amazon Linux 2023 AMI (x86_64)
+data "aws_ami" "al2023" {
+  most_recent = true
+  owners      = ["amazon"]
+
+  filter {
+    name   = "name"
+    values = ["al2023-ami-*-x86_64"]
+  }
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
+}
+
+resource "aws_security_group" "this" {
+  name        = "spacelift-drift-demo-sg"
+  description = "Security group for drift demo"
+  vpc_id      = data.aws_vpc.default.id
+
+  # Optional SSH from your IP
+  ingress {
+    description = "SSH from a single IP"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = [var.ssh_cidr]
+  }
+
+  egress {
+    description = "Allow all outbound"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "spacelift-drift-demo-sg"
+  }
+}
+
+resource "aws_instance" "this" {
+  ami                         = data.aws_ami.al2023.id
+  instance_type               = var.instance_type
+  subnet_id                   = data.aws_subnets.default.ids[0]
+  vpc_security_group_ids      = [aws_security_group.this.id]
+  associate_public_ip_address = true
+
+  tags = {
+    Name        = var.instance_name
+    Owner       = var.owner
+    Environment = var.environment
+  }
+}</code></pre>
+      <div class="note">
+        <b>Why this design?</b> We intentionally use <b>default VPC</b> + <b>a tag-based drift trigger</b>.
+        This keeps the demo focused on drift detection, not network engineering.
+      </div>
+    </div>
+
+    <div class="step">
+      <b>Step 2 — Create file: <code>variables.tf</code></b>
+      <pre><code>variable "aws_region" {
+  type        = string
+  description = "AWS region to deploy to"
+  default     = "ap-south-1"
+}
+
+variable "instance_type" {
+  type        = string
+  description = "EC2 instance type"
+  default     = "t3.micro"
+}
+
+variable "instance_name" {
+  type        = string
+  description = "Name tag for EC2"
+  default     = "spacelift-drift-demo"
+}
+
+variable "owner" {
+  type        = string
+  description = "Owner tag"
+  default     = "training"
+}
+
+variable "environment" {
+  type        = string
+  description = "Environment tag"
+  default     = "dev"
+}
+
+variable "ssh_cidr" {
+  type        = string
+  description = "CIDR allowed to SSH (e.g., your public IP /32)."
+  default     = "0.0.0.0/0"
+}</code></pre>
+
+      <div class="note warn">
+        <b>Important:</b> Replace <code>ssh_cidr</code> default with your public IP (e.g., <code>203.0.113.10/32</code>)
+        before applying, or set it as an environment variable in Spacelift.
+      </div>
+    </div>
+
+    <div class="step">
+      <b>Step 3 — Create file: <code>outputs.tf</code></b>
+      <pre><code>output "instance_id" {
+  description = "EC2 instance id"
+  value       = aws_instance.this.id
+}
+
+output "public_ip" {
+  description = "EC2 public IP"
+  value       = aws_instance.this.public_ip
+}
+
+output "security_group_id" {
+  description = "Security group id"
+  value       = aws_security_group.this.id
+}</code></pre>
+    </div>
+
+    <div class="step">
+      <b>Step 4 — Commit & push</b>
+      <pre><code>git init
+git add .
+git commit -m "EC2 drift demo with OpenTofu"
+git branch -M main
+git remote add origin &lt;YOUR_REPO_URL&gt;
+git push -u origin main</code></pre>
+    </div>
+  </section>
+
+  <section class="card" id="aws-integration">
+    <h2>AWS Integration in Spacelift (AssumeRole)</h2>
+
+    <div class="step">
+      <b>Step 1 — Create an IAM role in AWS for Spacelift</b>
+      <ul>
+        <li>Go to AWS IAM → Roles → Create role.</li>
+        <li>Select the trust policy method that Spacelift recommends (you’ll paste a trust policy that allows Spacelift to assume this role).</li>
+        <li>Grant minimum permissions for this lab (EC2 + SG + Describe).</li>
+      </ul>
+
+      <div class="note">
+        <b>How Spacelift uses it:</b> Spacelift assumes your IAM role and injects temporary AWS creds (as env vars)
+        into the run environment. That’s how OpenTofu can talk to AWS without long-lived keys.
+      </div>
+    </div>
+
+    <div class="step">
+      <b>Step 2 — Create the AWS integration in Spacelift</b>
+      <ul>
+        <li>In Spacelift: Integrations → Cloud integrations → AWS.</li>
+        <li>Provide a name and the role ARN you created.</li>
+        <li>Save.</li>
+      </ul>
+    </div>
+
+    <div class="step">
+      <b>Step 3 — Attach the integration to your stack</b>
+      <p class="small">
+        You can create integrations at account level, but you still need to attach them to the stack that will run OpenTofu.
+      </p>
+    </div>
+  </section>
+
+  <section class="card" id="stack">
+    <h2>Create a Spacelift Stack & first run</h2>
+
+    <div class="step">
+      <b>Step 1 — Create stack</b>
+      <ul>
+        <li>Stacks → Create stack.</li>
+        <li>Select your VCS provider + repository (<code>spacelift-drift-ec2-lab</code>).</li>
+        <li>Choose project root (repo root is fine here).</li>
+        <li>Choose the IaC workflow/tool: <b>OpenTofu</b> (or Terraform-compatible workflow, depending on your Spacelift UI).</li>
+        <li>Attach the AWS integration you created.</li>
+      </ul>
+    </div>
+
+    <div class="step">
+      <b>Step 2 — Configure inputs (recommended)</b>
+      <ul>
+        <li>Set <code>ssh_cidr</code> to your public IP /32 using stack environment variables.</li>
+        <li>Optionally set <code>aws_region</code>, <code>owner</code>, <code>environment</code>.</li>
+      </ul>
+      <pre><code># Example values
+TF_VAR_ssh_cidr=203.0.113.10/32
+TF_VAR_aws_region=ap-south-1
+TF_VAR_owner=trainee-john
+TF_VAR_environment=dev</code></pre>
+      <div class="note">
+        <b>Why TF_VAR_*</b>:
+        OpenTofu reads environment variables in the form <code>TF_VAR_name</code> as input variables.
+      </div>
+    </div>
+
+    <div class="step">
+      <b>Step 3 — Run the stack (initial apply)</b>
+      <ul>
+        <li>Trigger a run. Review the plan.</li>
+        <li>Apply (depending on your policies/approvals).</li>
+        <li>Confirm outputs show <code>public_ip</code> and <code>instance_id</code>.</li>
+      </ul>
+
+      <pre><code>Expected outcome:
+- 1 EC2 instance created
+- 1 Security Group created
+- Outputs present in the run</code></pre>
+
+      <div class="note">
+        <b>Checkpoint:</b> At this moment, your IaC state and AWS reality match — so drift is <span class="okline">zero</span>.
+      </div>
+    </div>
+  </section>
+
+  <section class="card" id="schedule">
+    <h2>Enable Drift Detection schedule</h2>
+
+    <div class="step">
+      <b>Step 1 — Open scheduling settings</b>
+      <ul>
+        <li>Open your stack → Settings → Scheduling.</li>
+        <li>Create a new schedule → <b>Drift detection</b>.</li>
+      </ul>
+    </div>
+
+    <div class="step">
+      <b>Step 2 — Set the drift cadence (cron)</b>
+      <p class="small">
+        For training, run drift checks frequently so trainees don’t wait long.
+        Example: every 10 minutes.
+      </p>
+      <pre><code># Every 10 minutes (standard cron)
+*/10 * * * *</code></pre>
+      <ul>
+        <li>Select timezone (use your local timezone).</li>
+        <li>Save.</li>
+      </ul>
+
+      <div class="note warn">
+        <b>Do NOT</b> keep frequent schedules on expensive stacks in real environments.
+        For production, pick a cadence that matches your risk tolerance and rate limits.
+      </div>
+    </div>
+
+    <div class="step">
+      <b>Step 3 — Reconcile option (choose one)</b>
+      <ul>
+        <li><b>Off</b> for first demo: drift is detected, but you manually decide to reconcile.</li>
+        <li><b>On</b> for second demo: Spacelift automatically triggers reconciliation runs after drift is detected.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="card" id="drift">
+    <h2>Introduce Drift (manual change in AWS)</h2>
+    <p class="small">We will create safe drift by changing a tag directly in AWS Console.</p>
+
+    <div class="step">
+      <b>Step 1 — Go to AWS Console → EC2 → Instances</b>
+      <ul>
+        <li>Select your instance (tag Name: <code>spacelift-drift-demo</code>).</li>
+        <li>Open the <b>Tags</b> tab.</li>
+      </ul>
+    </div>
+
+    <div class="step">
+      <b>Step 2 — Change a tag to create drift</b>
+      <ul>
+        <li>Find tag <code>Environment</code> (expected: <code>dev</code>).</li>
+        <li>Change it to <code>prod</code> (or any different value).</li>
+        <li>Save.</li>
+      </ul>
+
+      <div class="note bad">
+        <b>You just created drift:</b>
+        IaC expects <code>Environment=dev</code>, but AWS now has <code>Environment=prod</code>.
+      </div>
+    </div>
+  </section>
+
+  <section class="card" id="observe">
+    <h2>Observe Drift detection results</h2>
+
+    <div class="step">
+      <b>Step 1 — Wait for the scheduled drift run</b>
+      <ul>
+        <li>Open your stack → Runs.</li>
+        <li>Look for a run triggered by the drift schedule (it may be labeled as drift detection).</li>
+      </ul>
+    </div>
+
+    <div class="step">
+      <b>Step 2 — Review the drift plan</b>
+      <p class="small">You should see a proposed change similar to:</p>
+      <pre><code>~ resource "aws_instance" "this" {
+    tags = {
+-     "Environment" = "prod"
++     "Environment" = "dev"
+      ...
+    }
+  }</code></pre>
+
+      <div class="note">
+        <b>Interpretation:</b> Spacelift ran a plan-like drift check and found AWS has diverged.
+        It now proposes restoring the desired state from Git.
+      </div>
+    </div>
+  </section>
+
+  <section class="card" id="reconcile">
+    <h2>Reconcile options (manual vs auto)</h2>
+
+    <h3>Option A — Manual reconcile (recommended for first lab)</h3>
+    <div class="step">
+      <b>Step 1 — Trigger a reconciliation run (apply)</b>
+      <ul>
+        <li>From the drift run (or from the stack), trigger an apply run.</li>
+        <li>Apply the plan that sets <code>Environment</code> back to <code>dev</code>.</li>
+      </ul>
+      <div class="note">
+        <b>Best practice:</b> In real orgs, manual reconciliation is common when changes can be risky and need review/approval.
+      </div>
+    </div>
+
+    <h3>Option B — Auto reconcile (use for second demo)</h3>
+    <div class="step">
+      <b>Step 1 — Enable “Reconcile” on drift schedule</b>
+      <ul>
+        <li>Stack → Settings → Scheduling → Drift detection schedule.</li>
+        <li>Enable <b>Reconcile</b>.</li>
+      </ul>
+      <div class="note warn">
+        <b>Use carefully:</b> Auto-reconcile is great when scope is clear and policies/guardrails are strong.
+        Don’t auto-reconcile everything blindly in production.
+      </div>
+    </div>
+
+    <h3>Verification</h3>
+    <div class="step">
+      <b>Step 1 — Confirm drift is gone</b>
+      <ul>
+        <li>After reconcile, run drift detection again (or wait for schedule).</li>
+        <li>Plan should show <span class="okline">no changes</span>.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="card" id="troubleshoot">
+    <h2>Troubleshooting</h2>
+
+    <h3>1) Spacelift run fails with “AccessDenied” / STS assume role errors</h3>
+    <ul>
+      <li>Re-check IAM trust policy (Spacelift must be allowed to assume the role).</li>
+      <li>Re-check External ID settings if your setup uses it.</li>
+      <li>Ensure the role has permissions for EC2 + security groups.</li>
+    </ul>
+
+    <h3>2) Drift schedule runs, but no drift is detected</h3>
+    <ul>
+      <li>Make sure you changed a property OpenTofu manages (tags are best).</li>
+      <li>Confirm drift schedule is attached to the correct stack.</li>
+      <li>Confirm the tag change was saved on the same instance.</li>
+    </ul>
+
+    <h3>3) Default VPC not found</h3>
+    <ul>
+      <li>Some AWS accounts remove default VPCs. If so, replace the “default VPC” approach with a minimal VPC module.</li>
+      <li>Trainer workaround: provide a prebuilt VPC stack or shared VPC outputs for all trainees.</li>
+    </ul>
+
+    <div class="note">
+      <b>Trainer tip:</b> If trainees are blocked by VPC constraints, keep the drift lesson intact by switching the resource to something simpler
+      like an S3 bucket + tags. The drift process in Spacelift is the same.
+    </div>
+  </section>
+
+  <section class="card" id="cleanup">
+    <h2>Cleanup</h2>
+    <div class="step">
+      <b>Step 1 — Destroy via Spacelift</b>
+      <ul>
+        <li>Trigger a run that performs <code>tofu destroy</code> (depending on your Spacelift workflow settings).</li>
+        <li>Confirm EC2 instance + security group are removed.</li>
+      </ul>
+    </div>
+
+    <div class="note warn">
+      <b>Also check:</b> If you created extra things manually (key pairs, EIPs, etc.), delete them to avoid charges.
+    </div>
+  </section>
+
+  <section class="card" id="extensions">
+    <h2>Optional extensions (advanced)</h2>
+
+    <h3>Extension 1 — Compare “Manual drift” vs “Auto reconcile” outcomes</h3>
+    <ul>
+      <li>Run the lab twice: once with reconcile OFF and once with reconcile ON.</li>
+      <li>Discuss which environments should use which mode (dev vs prod).</li>
+    </ul>
+
+    <h3>Extension 2 — Add a simple guardrail policy idea (concept)</h3>
+    <ul>
+      <li>Require approval for reconciliation runs in prod stacks.</li>
+      <li>Allow auto-reconcile only for specific resources (tags, scaling settings) and block for destructive changes.</li>
+    </ul>
+
+    <h3>Extension 3 — Manage drift schedules “as code” (Spacelift provider)</h3>
+    <p class="small">
+      Spacelift supports defining drift detection configuration as code using their provider resource (useful for standardization).
+      This is optional and best as a trainer-led walkthrough after the main demo.
+    </p>
+    <pre><code># Example concept (separate admin repo/stack usually)
+# resource "spacelift_drift_detection" "ec2_demo" { ... }</code></pre>
+  </section>
+
+  <section class="card">
+    <h2>What trainees should submit</h2>
+    <ul>
+      <li>Screenshot or copied plan output showing the drift on tag change.</li>
+      <li>Screenshot or log showing reconciliation applied and drift becomes “no changes”.</li>
+      <li>Brief note: “When would you enable auto-reconcile, and when would you keep it manual?”</li>
+    </ul>
+  </section>
+
+  <p class="small" style="margin-top:14px;color:var(--muted);">
+    End of lab.
+  </p>
+</div>
+</body>
+</html>
