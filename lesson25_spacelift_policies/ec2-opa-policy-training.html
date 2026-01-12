@@ -1,0 +1,2417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenTofu EC2 Deployment with OPA Policies | Spacelift Training Lab</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Source+Sans+3:wght@400;500;600;700&family=Source+Serif+4:wght@600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #fafafa;
+            --bg-secondary: #ffffff;
+            --bg-code: #1e1e2e;
+            --text-primary: #1a1a2e;
+            --text-secondary: #4a4a6a;
+            --text-muted: #6b7280;
+            --accent-blue: #3b82f6;
+            --accent-purple: #8b5cf6;
+            --accent-green: #10b981;
+            --accent-orange: #f59e0b;
+            --accent-red: #ef4444;
+            --border-light: #e5e7eb;
+            --border-medium: #d1d5db;
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1);
+            --radius-sm: 6px;
+            --radius-md: 10px;
+            --radius-lg: 16px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Source Sans 3', -apple-system, BlinkMacSystemFont, sans-serif;
+            font-size: 17px;
+            line-height: 1.7;
+            color: var(--text-primary);
+            background: var(--bg-primary);
+        }
+
+        /* Header */
+        .lab-header {
+            background: linear-gradient(135deg, #1e1e2e 0%, #2d2d44 100%);
+            color: white;
+            padding: 3rem 2rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .lab-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+            opacity: 0.5;
+        }
+
+        .lab-header h1 {
+            font-family: 'Source Serif 4', Georgia, serif;
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            position: relative;
+        }
+
+        .lab-subtitle {
+            font-size: 1.25rem;
+            opacity: 0.9;
+            margin-bottom: 1.5rem;
+            position: relative;
+        }
+
+        .lab-badges {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+            position: relative;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: rgba(255,255,255,0.1);
+            border-radius: 50px;
+            font-size: 0.9rem;
+            backdrop-filter: blur(10px);
+        }
+
+        .badge-icon {
+            width: 18px;
+            height: 18px;
+        }
+
+        /* Navigation */
+        .toc-container {
+            max-width: 900px;
+            margin: -2rem auto 2rem;
+            padding: 0 1.5rem;
+            position: relative;
+            z-index: 10;
+        }
+
+        .toc {
+            background: var(--bg-secondary);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-lg);
+            padding: 2rem;
+        }
+
+        .toc h2 {
+            font-family: 'Source Serif 4', Georgia, serif;
+            font-size: 1.25rem;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        .toc-list {
+            list-style: none;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 0.5rem 2rem;
+        }
+
+        .toc-list a {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.5rem 0;
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .toc-list a:hover {
+            color: var(--accent-blue);
+        }
+
+        .toc-number {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            background: var(--bg-primary);
+            border-radius: 50%;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--accent-purple);
+        }
+
+        /* Main Content */
+        .content {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 0 1.5rem 4rem;
+        }
+
+        /* Sections */
+        section {
+            background: var(--bg-secondary);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm);
+            padding: 2.5rem;
+            margin-bottom: 2rem;
+        }
+
+        h2 {
+            font-family: 'Source Serif 4', Georgia, serif;
+            font-size: 1.75rem;
+            color: var(--text-primary);
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 2px solid var(--border-light);
+        }
+
+        h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 2rem 0 1rem;
+        }
+
+        h4 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin: 1.5rem 0 0.75rem;
+        }
+
+        p {
+            margin-bottom: 1rem;
+            color: var(--text-secondary);
+        }
+
+        /* Step Boxes */
+        .step-box {
+            background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-purple) 100%);
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: var(--radius-md);
+            margin: 2rem 0 1.5rem;
+            font-weight: 600;
+            font-size: 1.1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Code Blocks */
+        .code-block {
+            background: var(--bg-code);
+            border-radius: var(--radius-md);
+            margin: 1rem 0;
+            overflow: hidden;
+        }
+
+        .code-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            background: rgba(255,255,255,0.05);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .code-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: #a0a0b0;
+        }
+
+        .code-lang {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+            background: rgba(139, 92, 246, 0.3);
+            color: #c4b5fd;
+            border-radius: 4px;
+        }
+
+        pre {
+            margin: 0;
+            padding: 1.25rem;
+            overflow-x: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            line-height: 1.6;
+            color: #e0e0e8;
+        }
+
+        pre code {
+            background: none;
+            padding: 0;
+            color: inherit;
+        }
+
+        /* Inline code */
+        code {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9em;
+            background: #f1f5f9;
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            color: var(--accent-purple);
+        }
+
+        /* Syntax Highlighting */
+        .comment { color: #6a9955; }
+        .keyword { color: #c586c0; }
+        .string { color: #ce9178; }
+        .number { color: #b5cea8; }
+        .function { color: #dcdcaa; }
+        .variable { color: #9cdcfe; }
+        .type { color: #4ec9b0; }
+        .operator { color: #d4d4d4; }
+        .property { color: #9cdcfe; }
+        .attribute { color: #92c5f8; }
+
+        /* Alert Boxes */
+        .alert {
+            padding: 1.25rem 1.5rem;
+            border-radius: var(--radius-md);
+            margin: 1.5rem 0;
+            display: flex;
+            gap: 1rem;
+        }
+
+        .alert-icon {
+            flex-shrink: 0;
+            width: 24px;
+            height: 24px;
+        }
+
+        .alert-content {
+            flex: 1;
+        }
+
+        .alert-title {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .alert p {
+            margin: 0;
+            font-size: 0.95rem;
+        }
+
+        .alert-tip {
+            background: #ecfdf5;
+            border-left: 4px solid var(--accent-green);
+        }
+        .alert-tip .alert-icon { color: var(--accent-green); }
+        .alert-tip .alert-title { color: #065f46; }
+        .alert-tip p { color: #047857; }
+
+        .alert-warning {
+            background: #fffbeb;
+            border-left: 4px solid var(--accent-orange);
+        }
+        .alert-warning .alert-icon { color: var(--accent-orange); }
+        .alert-warning .alert-title { color: #92400e; }
+        .alert-warning p { color: #a16207; }
+
+        .alert-danger {
+            background: #fef2f2;
+            border-left: 4px solid var(--accent-red);
+        }
+        .alert-danger .alert-icon { color: var(--accent-red); }
+        .alert-danger .alert-title { color: #991b1b; }
+        .alert-danger p { color: #b91c1c; }
+
+        .alert-info {
+            background: #eff6ff;
+            border-left: 4px solid var(--accent-blue);
+        }
+        .alert-info .alert-icon { color: var(--accent-blue); }
+        .alert-info .alert-title { color: #1e40af; }
+        .alert-info p { color: #1d4ed8; }
+
+        /* Tables */
+        .table-wrapper {
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.95rem;
+        }
+
+        th, td {
+            padding: 0.875rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        th {
+            background: var(--bg-primary);
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        tr:hover {
+            background: var(--bg-primary);
+        }
+
+        /* Checklists */
+        .checklist {
+            list-style: none;
+            margin: 1rem 0;
+        }
+
+        .checklist li {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            padding: 0.5rem 0;
+            color: var(--text-secondary);
+        }
+
+        .checklist li::before {
+            content: '☐';
+            color: var(--accent-purple);
+            font-size: 1.1rem;
+        }
+
+        /* Directory Structure */
+        .directory {
+            background: var(--bg-primary);
+            border-radius: var(--radius-md);
+            padding: 1.25rem 1.5rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            line-height: 1.8;
+            margin: 1rem 0;
+            border: 1px solid var(--border-light);
+        }
+
+        .directory .folder { color: var(--accent-blue); }
+        .directory .file { color: var(--text-secondary); }
+
+        /* Numbered Lists */
+        ol {
+            padding-left: 1.5rem;
+            margin: 1rem 0;
+        }
+
+        ol li {
+            margin-bottom: 0.5rem;
+            color: var(--text-secondary);
+        }
+
+        /* Phase Flow */
+        .phase-flow {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+
+        .phase-item {
+            background: var(--bg-primary);
+            border-radius: var(--radius-md);
+            padding: 1.25rem;
+            text-align: center;
+            border: 1px solid var(--border-light);
+            position: relative;
+        }
+
+        .phase-item::after {
+            content: '→';
+            position: absolute;
+            right: -0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--accent-purple);
+            font-size: 1.25rem;
+            font-weight: bold;
+        }
+
+        .phase-item:last-child::after {
+            display: none;
+        }
+
+        .phase-number {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-purple) 100%);
+            color: white;
+            border-radius: 50%;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .phase-title {
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.25rem;
+        }
+
+        .phase-desc {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        /* Config Table */
+        .config-table {
+            background: var(--bg-primary);
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            margin: 1rem 0;
+        }
+
+        .config-row {
+            display: flex;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .config-row:last-child {
+            border-bottom: none;
+        }
+
+        .config-key {
+            flex: 0 0 180px;
+            padding: 0.875rem 1rem;
+            background: rgba(139, 92, 246, 0.05);
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .config-value {
+            flex: 1;
+            padding: 0.875rem 1rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        /* Success Box */
+        .success-box {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            padding: 2rem;
+            border-radius: var(--radius-lg);
+            text-align: center;
+            margin: 2rem 0;
+        }
+
+        .success-box h3 {
+            color: white;
+            font-size: 1.5rem;
+            margin: 0 0 0.5rem;
+        }
+
+        .success-box p {
+            color: rgba(255,255,255,0.9);
+            margin: 0;
+        }
+
+        /* Quick Reference */
+        .quick-ref {
+            background: var(--bg-code);
+            color: #e0e0e8;
+            border-radius: var(--radius-lg);
+            padding: 2rem;
+            margin: 2rem 0;
+        }
+
+        .quick-ref h3 {
+            color: white;
+            margin-top: 0;
+        }
+
+        .quick-ref h4 {
+            color: #a0a0b0;
+            margin-top: 1.5rem;
+        }
+
+        /* Footer */
+        .lab-footer {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        /* Print Styles */
+        @media print {
+            body { background: white; }
+            section { box-shadow: none; border: 1px solid #ddd; }
+            .code-block { break-inside: avoid; }
+            .lab-header { background: #1e1e2e !important; -webkit-print-color-adjust: exact; }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .lab-header h1 { font-size: 1.75rem; }
+            section { padding: 1.5rem; }
+            .phase-flow { grid-template-columns: 1fr 1fr; }
+            .phase-item::after { display: none; }
+            .config-row { flex-direction: column; }
+            .config-key { flex: none; }
+        }
+    </style>
+</head>
+<body>
+    <header class="lab-header">
+        <h1>OpenTofu EC2 Deployment</h1>
+        <p class="lab-subtitle">with OPA/Rego Policies in Spacelift</p>
+        <div class="lab-badges">
+            <span class="badge">
+                <svg class="badge-icon" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                Duration: 2-3 hours
+            </span>
+            <span class="badge">
+                <svg class="badge-icon" fill="currentColor" viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                Intermediate
+            </span>
+            <span class="badge">
+                <svg class="badge-icon" fill="currentColor" viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"/></svg>
+                AWS
+            </span>
+        </div>
+    </header>
+
+    <nav class="toc-container">
+        <div class="toc">
+            <h2>Table of Contents</h2>
+            <ol class="toc-list">
+                <li><a href="#section-1"><span class="toc-number">1</span> Lab Overview and Prerequisites</a></li>
+                <li><a href="#section-2"><span class="toc-number">2</span> Understanding OPA Policies</a></li>
+                <li><a href="#section-3"><span class="toc-number">3</span> Create the EC2 Module</a></li>
+                <li><a href="#section-4"><span class="toc-number">4</span> Write OPA/Rego Policies</a></li>
+                <li><a href="#section-5"><span class="toc-number">5</span> Register Policies in Spacelift</a></li>
+                <li><a href="#section-6"><span class="toc-number">6</span> Create the EC2 Stack</a></li>
+                <li><a href="#section-7"><span class="toc-number">7</span> Test Policy Enforcement</a></li>
+                <li><a href="#section-8"><span class="toc-number">8</span> Troubleshooting Guide</a></li>
+                <li><a href="#section-9"><span class="toc-number">9</span> Best Practices & Next Steps</a></li>
+            </ol>
+        </div>
+    </nav>
+
+    <main class="content">
+        <!-- Section 1: Overview -->
+        <section id="section-1">
+            <h2>Section 1: Lab Overview and Prerequisites</h2>
+            
+            <h3>1.1 Learning Objectives</h3>
+            <p>By the end of this lab, you will be able to:</p>
+            <ul class="checklist">
+                <li>Create a reusable EC2 module following OpenTofu best practices</li>
+                <li>Write OPA/Rego policies to enforce infrastructure standards</li>
+                <li>Register and attach policies to Spacelift stacks</li>
+                <li>Understand policy evaluation during plan and apply phases</li>
+                <li>Test policy enforcement with compliant and non-compliant configurations</li>
+                <li>Debug and troubleshoot policy failures</li>
+            </ul>
+
+            <h3>1.2 Prerequisites</h3>
+            <h4>Required Access</h4>
+            <ol>
+                <li>Spacelift account with administrative access</li>
+                <li>GitHub account with repository creation permissions</li>
+                <li>AWS account with EC2 permissions (create instances, VPCs, security groups)</li>
+            </ol>
+
+            <h4>Required Tools</h4>
+            <ol>
+                <li>Git CLI installed and configured</li>
+                <li>OpenTofu CLI (version 1.6.0 or later)</li>
+                <li>OPA CLI (optional, for local policy testing)</li>
+                <li>Text editor or IDE (VS Code recommended)</li>
+                <li>AWS CLI configured with valid credentials</li>
+            </ol>
+
+            <h4>Verify Your Environment</h4>
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">Terminal</span>
+                    <span class="code-lang">bash</span>
+                </div>
+                <pre><code><span class="comment"># Verify OpenTofu</span>
+tofu version
+<span class="comment"># Expected: OpenTofu v1.6.0 or higher</span>
+
+<span class="comment"># Verify Git</span>
+git --version
+
+<span class="comment"># Verify AWS CLI</span>
+aws sts get-caller-identity
+
+<span class="comment"># Verify AWS EC2 permissions</span>
+aws ec2 describe-instances --max-items 1
+
+<span class="comment"># Optional: Verify OPA CLI</span>
+opa version
+<span class="comment"># Expected: Version 0.60.0 or higher</span></code></pre>
+            </div>
+
+            <div class="alert alert-tip">
+                <svg class="alert-icon" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                <div class="alert-content">
+                    <div class="alert-title">Environment Check</div>
+                    <p>If any command fails, resolve the issue before proceeding. All prerequisites must be met for successful lab completion.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 2: Understanding OPA -->
+        <section id="section-2">
+            <h2>Section 2: Understanding OPA Policies in Spacelift</h2>
+
+            <h3>2.1 What is OPA?</h3>
+            <p>Open Policy Agent (OPA) is a general-purpose policy engine that enables unified, context-aware policy enforcement. In Spacelift, OPA policies written in Rego allow you to:</p>
+            <ol>
+                <li><strong>Enforce standards</strong> - Require specific tags, instance types, or configurations</li>
+                <li><strong>Prevent security risks</strong> - Block public IPs, overly permissive security groups</li>
+                <li><strong>Control costs</strong> - Limit instance sizes, require approval for expensive resources</li>
+                <li><strong>Ensure compliance</strong> - Validate resources meet regulatory requirements</li>
+            </ol>
+
+            <h3>2.2 Spacelift Policy Types</h3>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Policy Type</th>
+                            <th>Purpose</th>
+                            <th>When Evaluated</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>PLAN</code></td>
+                            <td>Evaluate planned changes before apply</td>
+                            <td>After <code>tofu plan</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>TRIGGER</code></td>
+                            <td>Control when stacks should run</td>
+                            <td>On Git push events</td>
+                        </tr>
+                        <tr>
+                            <td><code>ACCESS</code></td>
+                            <td>Define who can access stacks</td>
+                            <td>On user actions</td>
+                        </tr>
+                        <tr>
+                            <td><code>APPROVAL</code></td>
+                            <td>Require approvals for changes</td>
+                            <td>Before apply</td>
+                        </tr>
+                        <tr>
+                            <td><code>NOTIFICATION</code></td>
+                            <td>Send alerts on specific events</td>
+                            <td>On stack events</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3>2.3 Lab Workflow Overview</h3>
+            <div class="phase-flow">
+                <div class="phase-item">
+                    <div class="phase-number">1</div>
+                    <div class="phase-title">Create Module</div>
+                    <div class="phase-desc">Build EC2 module</div>
+                </div>
+                <div class="phase-item">
+                    <div class="phase-number">2</div>
+                    <div class="phase-title">Write Policies</div>
+                    <div class="phase-desc">Define OPA rules</div>
+                </div>
+                <div class="phase-item">
+                    <div class="phase-number">3</div>
+                    <div class="phase-title">Register</div>
+                    <div class="phase-desc">Add to Spacelift</div>
+                </div>
+                <div class="phase-item">
+                    <div class="phase-number">4</div>
+                    <div class="phase-title">Test</div>
+                    <div class="phase-desc">Validate enforcement</div>
+                </div>
+            </div>
+
+            <h3>2.4 Rego Language Basics</h3>
+            <p>Rego is OPA's declarative query language. Key concepts for Spacelift:</p>
+            
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">Rego Fundamentals</span>
+                    <span class="code-lang">rego</span>
+                </div>
+                <pre><code><span class="comment"># Package declaration - must match policy type</span>
+<span class="keyword">package</span> spacelift
+
+<span class="comment"># Input data comes from Spacelift (plan, run metadata, etc.)</span>
+<span class="comment"># Access with: input.terraform.resource_changes</span>
+
+<span class="comment"># Rules that DENY changes (return reasons)</span>
+<span class="function">deny</span>[<span class="variable">reason</span>] {
+    <span class="comment"># conditions that must all be true</span>
+    <span class="variable">some_condition</span>
+    <span class="variable">reason</span> := <span class="string">"Explanation of why denied"</span>
+}
+
+<span class="comment"># Rules that WARN (advisory, don't block)</span>
+<span class="function">warn</span>[<span class="variable">reason</span>] {
+    <span class="variable">some_condition</span>
+    <span class="variable">reason</span> := <span class="string">"Advisory message"</span>
+}
+
+<span class="comment"># Helper rules (reusable logic)</span>
+<span class="function">is_ec2_instance</span>(<span class="variable">resource</span>) {
+    <span class="variable">resource</span>.type == <span class="string">"aws_instance"</span>
+}</code></pre>
+            </div>
+
+            <div class="alert alert-info">
+                <svg class="alert-icon" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+                <div class="alert-content">
+                    <div class="alert-title">Spacelift Input Structure</div>
+                    <p>For PLAN policies, Spacelift provides <code>input.terraform.resource_changes</code> containing the planned changes in JSON format similar to <code>tofu show -json</code>.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 3: Create EC2 Module -->
+        <section id="section-3">
+            <h2>Section 3: Create the EC2 Module</h2>
+
+            <div class="step-box">Step 1: Set Up Repository Structure</div>
+
+            <h3>3.1 Create the Repository</h3>
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">Terminal</span>
+                    <span class="code-lang">bash</span>
+                </div>
+                <pre><code><span class="comment"># Clone or create your repository</span>
+git clone https://github.com/YOUR-ORG/infrastructure-modules.git
+cd infrastructure-modules
+
+<span class="comment"># Create module and policy directories</span>
+mkdir -p modules/ec2-instance
+mkdir -p policies</code></pre>
+            </div>
+
+            <h3>3.2 Module Directory Structure</h3>
+            <div class="directory">
+<span class="folder">infrastructure-modules/</span>
+├── <span class="file">README.md</span>
+├── <span class="folder">modules/</span>
+│   └── <span class="folder">ec2-instance/</span>
+│       ├── <span class="file">README.md</span>
+│       ├── <span class="file">versions.tf</span>
+│       ├── <span class="file">variables.tf</span>
+│       ├── <span class="file">main.tf</span>
+│       ├── <span class="file">outputs.tf</span>
+│       └── <span class="file">data.tf</span>
+└── <span class="folder">policies/</span>
+    ├── <span class="file">ec2-plan-policy.rego</span>
+    └── <span class="file">ec2-plan-policy_test.rego</span>
+            </div>
+
+            <div class="step-box">Step 2: Create the Module Files</div>
+
+            <h3>3.3 versions.tf</h3>
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">modules/ec2-instance/versions.tf</span>
+                    <span class="code-lang">hcl</span>
+                </div>
+                <pre><code><span class="comment"># modules/ec2-instance/versions.tf</span>
+<span class="comment"># Defines version constraints for OpenTofu and providers</span>
+
+<span class="keyword">terraform</span> {
+  <span class="property">required_version</span> = <span class="string">">= 1.6.0"</span>
+
+  <span class="property">required_providers</span> {
+    <span class="type">aws</span> = {
+      <span class="property">source</span>  = <span class="string">"hashicorp/aws"</span>
+      <span class="property">version</span> = <span class="string">"~> 5.0"</span>
+    }
+  }
+}</code></pre>
+            </div>
+
+            <div class="alert alert-warning">
+                <svg class="alert-icon" fill="currentColor" viewBox="0 0 24 24"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
+                <div class="alert-content">
+                    <div class="alert-title">Important</div>
+                    <p>Do NOT include a provider block in modules. Provider configuration should be done by the consuming stack, not the module itself.</p>
+                </div>
+            </div>
+
+            <h3>3.4 variables.tf</h3>
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">modules/ec2-instance/variables.tf</span>
+                    <span class="code-lang">hcl</span>
+                </div>
+                <pre><code><span class="comment"># modules/ec2-instance/variables.tf</span>
+<span class="comment"># Input variables for the EC2 instance module</span>
+
+<span class="keyword">variable</span> <span class="string">"instance_name"</span> {
+  <span class="property">description</span> = <span class="string">"Name tag for the EC2 instance"</span>
+  <span class="property">type</span>        = <span class="type">string</span>
+
+  <span class="keyword">validation</span> {
+    <span class="property">condition</span>     = <span class="function">length</span>(<span class="variable">var</span>.instance_name) > <span class="number">0</span> && <span class="function">length</span>(<span class="variable">var</span>.instance_name) <= <span class="number">64</span>
+    <span class="property">error_message</span> = <span class="string">"Instance name must be between 1 and 64 characters."</span>
+  }
+}
+
+<span class="keyword">variable</span> <span class="string">"instance_type"</span> {
+  <span class="property">description</span> = <span class="string">"EC2 instance type (e.g., t3.micro, t3.small)"</span>
+  <span class="property">type</span>        = <span class="type">string</span>
+  <span class="property">default</span>     = <span class="string">"t3.micro"</span>
+
+  <span class="keyword">validation</span> {
+    <span class="property">condition</span> = <span class="function">contains</span>([
+      <span class="string">"t3.micro"</span>, <span class="string">"t3.small"</span>, <span class="string">"t3.medium"</span>,
+      <span class="string">"t3.large"</span>, <span class="string">"t3.xlarge"</span>, <span class="string">"t3.2xlarge"</span>,
+      <span class="string">"t2.micro"</span>, <span class="string">"t2.small"</span>, <span class="string">"t2.medium"</span>
+    ], <span class="variable">var</span>.instance_type)
+    <span class="property">error_message</span> = <span class="string">"Instance type must be an approved t2 or t3 instance type."</span>
+  }
+}
+
+<span class="keyword">variable</span> <span class="string">"environment"</span> {
+  <span class="property">description</span> = <span class="string">"Deployment environment (dev, staging, prod)"</span>
+  <span class="property">type</span>        = <span class="type">string</span>
+  <span class="property">default</span>     = <span class="string">"dev"</span>
+
+  <span class="keyword">validation</span> {
+    <span class="property">condition</span>     = <span class="function">contains</span>([<span class="string">"dev"</span>, <span class="string">"staging"</span>, <span class="string">"prod"</span>], <span class="variable">var</span>.environment)
+    <span class="property">error_message</span> = <span class="string">"Environment must be dev, staging, or prod."</span>
+  }
+}
+
+<span class="keyword">variable</span> <span class="string">"ami_id"</span> {
+  <span class="property">description</span> = <span class="string">"AMI ID for the instance. If not specified, latest Amazon Linux 2023 is used."</span>
+  <span class="property">type</span>        = <span class="type">string</span>
+  <span class="property">default</span>     = <span class="string">""</span>
+}
+
+<span class="keyword">variable</span> <span class="string">"subnet_id"</span> {
+  <span class="property">description</span> = <span class="string">"VPC Subnet ID for the instance"</span>
+  <span class="property">type</span>        = <span class="type">string</span>
+}
+
+<span class="keyword">variable</span> <span class="string">"vpc_id"</span> {
+  <span class="property">description</span> = <span class="string">"VPC ID for security group creation"</span>
+  <span class="property">type</span>        = <span class="type">string</span>
+}
+
+<span class="keyword">variable</span> <span class="string">"associate_public_ip"</span> {
+  <span class="property">description</span> = <span class="string">"Whether to associate a public IP address"</span>
+  <span class="property">type</span>        = <span class="type">bool</span>
+  <span class="property">default</span>     = <span class="keyword">false</span>
+}
+
+<span class="keyword">variable</span> <span class="string">"root_volume_size"</span> {
+  <span class="property">description</span> = <span class="string">"Size of the root EBS volume in GB"</span>
+  <span class="property">type</span>        = <span class="type">number</span>
+  <span class="property">default</span>     = <span class="number">20</span>
+
+  <span class="keyword">validation</span> {
+    <span class="property">condition</span>     = <span class="variable">var</span>.root_volume_size >= <span class="number">8</span> && <span class="variable">var</span>.root_volume_size <= <span class="number">100</span>
+    <span class="property">error_message</span> = <span class="string">"Root volume size must be between 8 and 100 GB."</span>
+  }
+}
+
+<span class="keyword">variable</span> <span class="string">"key_name"</span> {
+  <span class="property">description</span> = <span class="string">"Name of the SSH key pair for instance access"</span>
+  <span class="property">type</span>        = <span class="type">string</span>
+  <span class="property">default</span>     = <span class="string">""</span>
+}
+
+<span class="keyword">variable</span> <span class="string">"enable_monitoring"</span> {
+  <span class="property">description</span> = <span class="string">"Enable detailed CloudWatch monitoring"</span>
+  <span class="property">type</span>        = <span class="type">bool</span>
+  <span class="property">default</span>     = <span class="keyword">true</span>
+}
+
+<span class="keyword">variable</span> <span class="string">"allowed_ssh_cidrs"</span> {
+  <span class="property">description</span> = <span class="string">"CIDR blocks allowed for SSH access"</span>
+  <span class="property">type</span>        = <span class="type">list</span>(<span class="type">string</span>)
+  <span class="property">default</span>     = []
+}
+
+<span class="keyword">variable</span> <span class="string">"tags"</span> {
+  <span class="property">description</span> = <span class="string">"Additional tags to apply to resources"</span>
+  <span class="property">type</span>        = <span class="type">map</span>(<span class="type">string</span>)
+  <span class="property">default</span>     = {}
+}</code></pre>
+            </div>
+
+            <h3>3.5 data.tf</h3>
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">modules/ec2-instance/data.tf</span>
+                    <span class="code-lang">hcl</span>
+                </div>
+                <pre><code><span class="comment"># modules/ec2-instance/data.tf</span>
+<span class="comment"># Data sources for the EC2 module</span>
+
+<span class="comment"># Get latest Amazon Linux 2023 AMI if not specified</span>
+<span class="keyword">data</span> <span class="string">"aws_ami"</span> <span class="string">"amazon_linux"</span> {
+  <span class="property">most_recent</span> = <span class="keyword">true</span>
+  <span class="property">owners</span>      = [<span class="string">"amazon"</span>]
+
+  <span class="keyword">filter</span> {
+    <span class="property">name</span>   = <span class="string">"name"</span>
+    <span class="property">values</span> = [<span class="string">"al2023-ami-*-x86_64"</span>]
+  }
+
+  <span class="keyword">filter</span> {
+    <span class="property">name</span>   = <span class="string">"virtualization-type"</span>
+    <span class="property">values</span> = [<span class="string">"hvm"</span>]
+  }
+}
+
+<span class="comment"># Get current AWS region</span>
+<span class="keyword">data</span> <span class="string">"aws_region"</span> <span class="string">"current"</span> {}</code></pre>
+            </div>
+
+            <h3>3.6 main.tf</h3>
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">modules/ec2-instance/main.tf</span>
+                    <span class="code-lang">hcl</span>
+                </div>
+                <pre><code><span class="comment"># modules/ec2-instance/main.tf</span>
+<span class="comment"># Main resource definitions for EC2 instance module</span>
+
+<span class="keyword">locals</span> {
+  <span class="property">ami_id</span> = <span class="variable">var</span>.ami_id != <span class="string">""</span> ? <span class="variable">var</span>.ami_id : <span class="variable">data</span>.aws_ami.amazon_linux.id
+
+  <span class="property">common_tags</span> = <span class="function">merge</span>(
+    {
+      <span class="property">Name</span>        = <span class="variable">var</span>.instance_name
+      <span class="property">Environment</span> = <span class="variable">var</span>.environment
+      <span class="property">ManagedBy</span>   = <span class="string">"OpenTofu"</span>
+      <span class="property">Module</span>      = <span class="string">"ec2-instance"</span>
+    },
+    <span class="variable">var</span>.tags
+  )
+}
+
+<span class="comment"># Security Group for EC2 Instance</span>
+<span class="keyword">resource</span> <span class="string">"aws_security_group"</span> <span class="string">"instance"</span> {
+  <span class="property">name_prefix</span> = <span class="string">"${var.instance_name}-"</span>
+  <span class="property">description</span> = <span class="string">"Security group for ${var.instance_name}"</span>
+  <span class="property">vpc_id</span>      = <span class="variable">var</span>.vpc_id
+
+  <span class="comment"># Egress: Allow all outbound traffic</span>
+  <span class="keyword">egress</span> {
+    <span class="property">from_port</span>   = <span class="number">0</span>
+    <span class="property">to_port</span>     = <span class="number">0</span>
+    <span class="property">protocol</span>    = <span class="string">"-1"</span>
+    <span class="property">cidr_blocks</span> = [<span class="string">"0.0.0.0/0"</span>]
+    <span class="property">description</span> = <span class="string">"Allow all outbound traffic"</span>
+  }
+
+  <span class="property">tags</span> = <span class="variable">local</span>.common_tags
+
+  <span class="keyword">lifecycle</span> {
+    <span class="property">create_before_destroy</span> = <span class="keyword">true</span>
+  }
+}
+
+<span class="comment"># SSH Ingress Rule (only if CIDRs specified)</span>
+<span class="keyword">resource</span> <span class="string">"aws_security_group_rule"</span> <span class="string">"ssh_ingress"</span> {
+  <span class="property">count</span> = <span class="function">length</span>(<span class="variable">var</span>.allowed_ssh_cidrs) > <span class="number">0</span> ? <span class="number">1</span> : <span class="number">0</span>
+
+  <span class="property">type</span>              = <span class="string">"ingress"</span>
+  <span class="property">from_port</span>         = <span class="number">22</span>
+  <span class="property">to_port</span>           = <span class="number">22</span>
+  <span class="property">protocol</span>          = <span class="string">"tcp"</span>
+  <span class="property">cidr_blocks</span>       = <span class="variable">var</span>.allowed_ssh_cidrs
+  <span class="property">security_group_id</span> = <span class="variable">aws_security_group</span>.instance.id
+  <span class="property">description</span>       = <span class="string">"SSH access from allowed CIDRs"</span>
+}
+
+<span class="comment"># EC2 Instance</span>
+<span class="keyword">resource</span> <span class="string">"aws_instance"</span> <span class="string">"this"</span> {
+  <span class="property">ami</span>           = <span class="variable">local</span>.ami_id
+  <span class="property">instance_type</span> = <span class="variable">var</span>.instance_type
+  <span class="property">subnet_id</span>     = <span class="variable">var</span>.subnet_id
+
+  <span class="property">vpc_security_group_ids</span>      = [<span class="variable">aws_security_group</span>.instance.id]
+  <span class="property">associate_public_ip_address</span> = <span class="variable">var</span>.associate_public_ip
+  <span class="property">key_name</span>                    = <span class="variable">var</span>.key_name != <span class="string">""</span> ? <span class="variable">var</span>.key_name : <span class="keyword">null</span>
+  <span class="property">monitoring</span>                  = <span class="variable">var</span>.enable_monitoring
+
+  <span class="keyword">root_block_device</span> {
+    <span class="property">volume_size</span>           = <span class="variable">var</span>.root_volume_size
+    <span class="property">volume_type</span>           = <span class="string">"gp3"</span>
+    <span class="property">encrypted</span>             = <span class="keyword">true</span>
+    <span class="property">delete_on_termination</span> = <span class="keyword">true</span>
+
+    <span class="property">tags</span> = <span class="function">merge</span>(<span class="variable">local</span>.common_tags, {
+      <span class="property">Name</span> = <span class="string">"${var.instance_name}-root"</span>
+    })
+  }
+
+  <span class="comment"># Enable IMDSv2 (security best practice)</span>
+  <span class="keyword">metadata_options</span> {
+    <span class="property">http_endpoint</span>               = <span class="string">"enabled"</span>
+    <span class="property">http_tokens</span>                 = <span class="string">"required"</span>
+    <span class="property">http_put_response_hop_limit</span> = <span class="number">1</span>
+  }
+
+  <span class="property">tags</span> = <span class="variable">local</span>.common_tags
+
+  <span class="keyword">lifecycle</span> {
+    <span class="property">ignore_changes</span> = [<span class="property">ami</span>]
+  }
+}</code></pre>
+            </div>
+
+            <div class="alert alert-tip">
+                <svg class="alert-icon" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                <div class="alert-content">
+                    <div class="alert-title">Security First</div>
+                    <p>This module implements security best practices by default: IMDSv2 required, encrypted root volumes, no public IP by default, and explicit SSH CIDR allowlisting.</p>
+                </div>
+            </div>
+
+            <h3>3.7 outputs.tf</h3>
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">modules/ec2-instance/outputs.tf</span>
+                    <span class="code-lang">hcl</span>
+                </div>
+                <pre><code><span class="comment"># modules/ec2-instance/outputs.tf</span>
+<span class="comment"># Output values exposed by the module</span>
+
+<span class="keyword">output</span> <span class="string">"instance_id"</span> {
+  <span class="property">description</span> = <span class="string">"The ID of the EC2 instance"</span>
+  <span class="property">value</span>       = <span class="variable">aws_instance</span>.this.id
+}
+
+<span class="keyword">output</span> <span class="string">"instance_arn"</span> {
+  <span class="property">description</span> = <span class="string">"The ARN of the EC2 instance"</span>
+  <span class="property">value</span>       = <span class="variable">aws_instance</span>.this.arn
+}
+
+<span class="keyword">output</span> <span class="string">"private_ip"</span> {
+  <span class="property">description</span> = <span class="string">"The private IP address of the instance"</span>
+  <span class="property">value</span>       = <span class="variable">aws_instance</span>.this.private_ip
+}
+
+<span class="keyword">output</span> <span class="string">"public_ip"</span> {
+  <span class="property">description</span> = <span class="string">"The public IP address (if assigned)"</span>
+  <span class="property">value</span>       = <span class="variable">aws_instance</span>.this.public_ip
+}
+
+<span class="keyword">output</span> <span class="string">"private_dns"</span> {
+  <span class="property">description</span> = <span class="string">"The private DNS name of the instance"</span>
+  <span class="property">value</span>       = <span class="variable">aws_instance</span>.this.private_dns
+}
+
+<span class="keyword">output</span> <span class="string">"security_group_id"</span> {
+  <span class="property">description</span> = <span class="string">"The ID of the security group"</span>
+  <span class="property">value</span>       = <span class="variable">aws_security_group</span>.instance.id
+}
+
+<span class="keyword">output</span> <span class="string">"instance_state"</span> {
+  <span class="property">description</span> = <span class="string">"The state of the instance"</span>
+  <span class="property">value</span>       = <span class="variable">aws_instance</span>.this.instance_state
+}
+
+<span class="keyword">output</span> <span class="string">"ami_id"</span> {
+  <span class="property">description</span> = <span class="string">"The AMI ID used for the instance"</span>
+  <span class="property">value</span>       = <span class="variable">aws_instance</span>.this.ami
+}</code></pre>
+            </div>
+
+            <div class="step-box">Step 3: Validate and Commit</div>
+
+            <h3>3.8 Validate the Module</h3>
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">Terminal</span>
+                    <span class="code-lang">bash</span>
+                </div>
+                <pre><code><span class="comment"># Navigate to module directory</span>
+cd modules/ec2-instance
+
+<span class="comment"># Initialize and validate</span>
+tofu init
+tofu validate
+
+<span class="comment"># Expected output:</span>
+<span class="comment"># Success! The configuration is valid.</span>
+
+<span class="comment"># Format the code</span>
+tofu fmt -recursive
+
+<span class="comment"># Return to repository root and commit</span>
+cd ../..
+git add .
+git commit -m "Add ec2-instance module with security defaults"
+git push origin main</code></pre>
+            </div>
+
+            <h3>3.9 Create Version Tag</h3>
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">Terminal</span>
+                    <span class="code-lang">bash</span>
+                </div>
+                <pre><code><span class="comment"># Create the version tag</span>
+git tag ec2-instance/v1.0.0
+
+<span class="comment"># Push the tag to GitHub</span>
+git push origin ec2-instance/v1.0.0
+
+<span class="comment"># Verify</span>
+git tag -l "ec2-instance/*"
+<span class="comment"># Expected: ec2-instance/v1.0.0</span></code></pre>
+            </div>
+        </section>
+
+        <!-- Section 4: Write OPA Policies -->
+        <section id="section-4">
+            <h2>Section 4: Write OPA/Rego Policies</h2>
+
+            <div class="step-box">Step 4: Create the Plan Policy</div>
+
+            <h3>4.1 Policy Requirements</h3>
+            <p>Our policy will enforce the following rules for EC2 instances:</p>
+            <ol>
+                <li><strong>Instance Type Restrictions</strong> - Only allow approved instance types</li>
+                <li><strong>Required Tags</strong> - Enforce Environment and Owner tags</li>
+                <li><strong>No Public IPs in Production</strong> - Block public IP assignment for prod</li>
+                <li><strong>Encryption Required</strong> - Root volumes must be encrypted</li>
+                <li><strong>Security Group Rules</strong> - No 0.0.0.0/0 SSH access</li>
+            </ol>
+
+            <h3>4.2 Main Policy File</h3>
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">policies/ec2-plan-policy.rego</span>
+                    <span class="code-lang">rego</span>
+                </div>
+                <pre><code><span class="comment"># policies/ec2-plan-policy.rego</span>
+<span class="comment"># OPA Policy for EC2 Instance Deployment Standards</span>
+<span class="comment"># Policy Type: PLAN</span>
+
+<span class="keyword">package</span> spacelift
+
+<span class="comment"># ============================================================================</span>
+<span class="comment"># CONFIGURATION - Approved Values</span>
+<span class="comment"># ============================================================================</span>
+
+<span class="comment"># Approved instance types by environment</span>
+<span class="variable">approved_instance_types</span> := {
+    <span class="string">"dev"</span>: [<span class="string">"t3.micro"</span>, <span class="string">"t3.small"</span>, <span class="string">"t2.micro"</span>, <span class="string">"t2.small"</span>],
+    <span class="string">"staging"</span>: [<span class="string">"t3.micro"</span>, <span class="string">"t3.small"</span>, <span class="string">"t3.medium"</span>],
+    <span class="string">"prod"</span>: [<span class="string">"t3.small"</span>, <span class="string">"t3.medium"</span>, <span class="string">"t3.large"</span>, <span class="string">"t3.xlarge"</span>]
+}
+
+<span class="comment"># Required tags for all EC2 instances</span>
+<span class="variable">required_tags</span> := [<span class="string">"Environment"</span>, <span class="string">"Owner"</span>, <span class="string">"Name"</span>]
+
+<span class="comment"># Maximum root volume size in GB</span>
+<span class="variable">max_root_volume_gb</span> := <span class="number">100</span>
+
+<span class="comment"># ============================================================================</span>
+<span class="comment"># HELPER FUNCTIONS</span>
+<span class="comment"># ============================================================================</span>
+
+<span class="comment"># Check if a resource is an EC2 instance being created or updated</span>
+<span class="function">is_ec2_instance</span>(<span class="variable">resource</span>) {
+    <span class="variable">resource</span>.type == <span class="string">"aws_instance"</span>
+    <span class="variable">resource</span>.change.actions[_] != <span class="string">"delete"</span>
+}
+
+<span class="comment"># Check if a resource is a security group rule</span>
+<span class="function">is_security_group_rule</span>(<span class="variable">resource</span>) {
+    <span class="variable">resource</span>.type == <span class="string">"aws_security_group_rule"</span>
+    <span class="variable">resource</span>.change.actions[_] != <span class="string">"delete"</span>
+}
+
+<span class="comment"># Check if a resource is a security group</span>
+<span class="function">is_security_group</span>(<span class="variable">resource</span>) {
+    <span class="variable">resource</span>.type == <span class="string">"aws_security_group"</span>
+    <span class="variable">resource</span>.change.actions[_] != <span class="string">"delete"</span>
+}
+
+<span class="comment"># Get the planned values (after) for a resource</span>
+<span class="function">planned_values</span>(<span class="variable">resource</span>) := <span class="variable">resource</span>.change.after
+
+<span class="comment"># Get environment from tags, default to "unknown"</span>
+<span class="function">get_environment</span>(<span class="variable">resource</span>) := <span class="variable">env</span> {
+    <span class="variable">values</span> := <span class="function">planned_values</span>(<span class="variable">resource</span>)
+    <span class="variable">env</span> := <span class="variable">values</span>.tags.Environment
+} <span class="keyword">else</span> := <span class="string">"unknown"</span>
+
+<span class="comment"># ============================================================================</span>
+<span class="comment"># DENY RULES - Block Non-Compliant Changes</span>
+<span class="comment"># ============================================================================</span>
+
+<span class="comment"># RULE 1: Enforce approved instance types</span>
+<span class="function">deny</span>[<span class="variable">reason</span>] {
+    <span class="variable">resource</span> := <span class="variable">input</span>.terraform.resource_changes[_]
+    <span class="function">is_ec2_instance</span>(<span class="variable">resource</span>)
+    
+    <span class="variable">values</span> := <span class="function">planned_values</span>(<span class="variable">resource</span>)
+    <span class="variable">instance_type</span> := <span class="variable">values</span>.instance_type
+    <span class="variable">env</span> := <span class="function">get_environment</span>(<span class="variable">resource</span>)
+    
+    <span class="comment"># Get approved types for this environment</span>
+    <span class="variable">approved</span> := <span class="variable">approved_instance_types</span>[<span class="variable">env</span>]
+    
+    <span class="comment"># Check if instance type is NOT in approved list</span>
+    <span class="keyword">not</span> <span class="variable">instance_type</span> <span class="keyword">in</span> <span class="variable">approved</span>
+    
+    <span class="variable">reason</span> := <span class="function">sprintf</span>(
+        <span class="string">"EC2 instance '%s': Instance type '%s' is not approved for %s environment. Approved types: %v"</span>,
+        [<span class="variable">resource</span>.address, <span class="variable">instance_type</span>, <span class="variable">env</span>, <span class="variable">approved</span>]
+    )
+}
+
+<span class="comment"># RULE 2: Enforce required tags</span>
+<span class="function">deny</span>[<span class="variable">reason</span>] {
+    <span class="variable">resource</span> := <span class="variable">input</span>.terraform.resource_changes[_]
+    <span class="function">is_ec2_instance</span>(<span class="variable">resource</span>)
+    
+    <span class="variable">values</span> := <span class="function">planned_values</span>(<span class="variable">resource</span>)
+    <span class="variable">required_tag</span> := <span class="variable">required_tags</span>[_]
+    
+    <span class="comment"># Check if tag is missing or empty</span>
+    <span class="keyword">not</span> <span class="variable">values</span>.tags[<span class="variable">required_tag</span>]
+    
+    <span class="variable">reason</span> := <span class="function">sprintf</span>(
+        <span class="string">"EC2 instance '%s': Required tag '%s' is missing. All instances must have: %v"</span>,
+        [<span class="variable">resource</span>.address, <span class="variable">required_tag</span>, <span class="variable">required_tags</span>]
+    )
+}
+
+<span class="comment"># RULE 3: Block public IPs in production</span>
+<span class="function">deny</span>[<span class="variable">reason</span>] {
+    <span class="variable">resource</span> := <span class="variable">input</span>.terraform.resource_changes[_]
+    <span class="function">is_ec2_instance</span>(<span class="variable">resource</span>)
+    
+    <span class="variable">values</span> := <span class="function">planned_values</span>(<span class="variable">resource</span>)
+    <span class="variable">env</span> := <span class="function">get_environment</span>(<span class="variable">resource</span>)
+    
+    <span class="variable">env</span> == <span class="string">"prod"</span>
+    <span class="variable">values</span>.associate_public_ip_address == <span class="keyword">true</span>
+    
+    <span class="variable">reason</span> := <span class="function">sprintf</span>(
+        <span class="string">"EC2 instance '%s': Public IP addresses are not allowed in production. Use a load balancer or bastion host instead."</span>,
+        [<span class="variable">resource</span>.address]
+    )
+}
+
+<span class="comment"># RULE 4: Require encrypted root volumes</span>
+<span class="function">deny</span>[<span class="variable">reason</span>] {
+    <span class="variable">resource</span> := <span class="variable">input</span>.terraform.resource_changes[_]
+    <span class="function">is_ec2_instance</span>(<span class="variable">resource</span>)
+    
+    <span class="variable">values</span> := <span class="function">planned_values</span>(<span class="variable">resource</span>)
+    <span class="variable">root_block</span> := <span class="variable">values</span>.root_block_device[_]
+    
+    <span class="variable">root_block</span>.encrypted != <span class="keyword">true</span>
+    
+    <span class="variable">reason</span> := <span class="function">sprintf</span>(
+        <span class="string">"EC2 instance '%s': Root volume must be encrypted. Set encrypted = true in root_block_device."</span>,
+        [<span class="variable">resource</span>.address]
+    )
+}
+
+<span class="comment"># RULE 5: Limit root volume size</span>
+<span class="function">deny</span>[<span class="variable">reason</span>] {
+    <span class="variable">resource</span> := <span class="variable">input</span>.terraform.resource_changes[_]
+    <span class="function">is_ec2_instance</span>(<span class="variable">resource</span>)
+    
+    <span class="variable">values</span> := <span class="function">planned_values</span>(<span class="variable">resource</span>)
+    <span class="variable">root_block</span> := <span class="variable">values</span>.root_block_device[_]
+    
+    <span class="variable">root_block</span>.volume_size > <span class="variable">max_root_volume_gb</span>
+    
+    <span class="variable">reason</span> := <span class="function">sprintf</span>(
+        <span class="string">"EC2 instance '%s': Root volume size %d GB exceeds maximum allowed %d GB."</span>,
+        [<span class="variable">resource</span>.address, <span class="variable">root_block</span>.volume_size, <span class="variable">max_root_volume_gb</span>]
+    )
+}
+
+<span class="comment"># RULE 6: Block 0.0.0.0/0 SSH access</span>
+<span class="function">deny</span>[<span class="variable">reason</span>] {
+    <span class="variable">resource</span> := <span class="variable">input</span>.terraform.resource_changes[_]
+    <span class="function">is_security_group_rule</span>(<span class="variable">resource</span>)
+    
+    <span class="variable">values</span> := <span class="function">planned_values</span>(<span class="variable">resource</span>)
+    
+    <span class="variable">values</span>.type == <span class="string">"ingress"</span>
+    <span class="variable">values</span>.from_port <= <span class="number">22</span>
+    <span class="variable">values</span>.to_port >= <span class="number">22</span>
+    
+    <span class="variable">cidr</span> := <span class="variable">values</span>.cidr_blocks[_]
+    <span class="variable">cidr</span> == <span class="string">"0.0.0.0/0"</span>
+    
+    <span class="variable">reason</span> := <span class="function">sprintf</span>(
+        <span class="string">"Security group rule '%s': SSH (port 22) access from 0.0.0.0/0 is not allowed. Use specific CIDR ranges."</span>,
+        [<span class="variable">resource</span>.address]
+    )
+}
+
+<span class="comment"># ============================================================================</span>
+<span class="comment"># WARN RULES - Advisory Messages (Don't Block)</span>
+<span class="comment"># ============================================================================</span>
+
+<span class="comment"># WARN: Recommend IMDSv2</span>
+<span class="function">warn</span>[<span class="variable">reason</span>] {
+    <span class="variable">resource</span> := <span class="variable">input</span>.terraform.resource_changes[_]
+    <span class="function">is_ec2_instance</span>(<span class="variable">resource</span>)
+    
+    <span class="variable">values</span> := <span class="function">planned_values</span>(<span class="variable">resource</span>)
+    <span class="variable">metadata</span> := <span class="variable">values</span>.metadata_options[_]
+    
+    <span class="variable">metadata</span>.http_tokens != <span class="string">"required"</span>
+    
+    <span class="variable">reason</span> := <span class="function">sprintf</span>(
+        <span class="string">"EC2 instance '%s': Consider enabling IMDSv2 by setting http_tokens = 'required' in metadata_options."</span>,
+        [<span class="variable">resource</span>.address]
+    )
+}
+
+<span class="comment"># WARN: Large instance types in dev</span>
+<span class="function">warn</span>[<span class="variable">reason</span>] {
+    <span class="variable">resource</span> := <span class="variable">input</span>.terraform.resource_changes[_]
+    <span class="function">is_ec2_instance</span>(<span class="variable">resource</span>)
+    
+    <span class="variable">values</span> := <span class="function">planned_values</span>(<span class="variable">resource</span>)
+    <span class="variable">env</span> := <span class="function">get_environment</span>(<span class="variable">resource</span>)
+    
+    <span class="variable">env</span> == <span class="string">"dev"</span>
+    <span class="function">contains</span>(<span class="variable">values</span>.instance_type, <span class="string">"large"</span>)
+    
+    <span class="variable">reason</span> := <span class="function">sprintf</span>(
+        <span class="string">"EC2 instance '%s': Using '%s' in dev environment. Consider using a smaller instance to reduce costs."</span>,
+        [<span class="variable">resource</span>.address, <span class="variable">values</span>.instance_type]
+    )
+}
+
+<span class="comment"># WARN: Missing detailed monitoring in prod</span>
+<span class="function">warn</span>[<span class="variable">reason</span>] {
+    <span class="variable">resource</span> := <span class="variable">input</span>.terraform.resource_changes[_]
+    <span class="function">is_ec2_instance</span>(<span class="variable">resource</span>)
+    
+    <span class="variable">values</span> := <span class="function">planned_values</span>(<span class="variable">resource</span>)
+    <span class="variable">env</span> := <span class="function">get_environment</span>(<span class="variable">resource</span>)
+    
+    <span class="variable">env</span> == <span class="string">"prod"</span>
+    <span class="variable">values</span>.monitoring != <span class="keyword">true</span>
+    
+    <span class="variable">reason</span> := <span class="function">sprintf</span>(
+        <span class="string">"EC2 instance '%s': Detailed CloudWatch monitoring is recommended for production instances."</span>,
+        [<span class="variable">resource</span>.address]
+    )
+}</code></pre>
+            </div>
+
+            <div class="step-box">Step 5: Create Policy Tests</div>
+
+            <h3>4.3 Test File</h3>
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">policies/ec2-plan-policy_test.rego</span>
+                    <span class="code-lang">rego</span>
+                </div>
+                <pre><code><span class="comment"># policies/ec2-plan-policy_test.rego</span>
+<span class="comment"># Unit tests for EC2 plan policy</span>
+
+<span class="keyword">package</span> spacelift
+
+<span class="keyword">import</span> future.keywords.in
+
+<span class="comment"># ============================================================================</span>
+<span class="comment"># TEST: Instance Type Rules</span>
+<span class="comment"># ============================================================================</span>
+
+<span class="comment"># Test: Approved instance type should pass</span>
+<span class="function">test_approved_instance_type_dev</span> {
+    <span class="variable">result</span> := <span class="function">deny</span> <span class="keyword">with</span> input <span class="keyword">as</span> {
+        <span class="string">"terraform"</span>: {
+            <span class="string">"resource_changes"</span>: [{
+                <span class="string">"address"</span>: <span class="string">"aws_instance.test"</span>,
+                <span class="string">"type"</span>: <span class="string">"aws_instance"</span>,
+                <span class="string">"change"</span>: {
+                    <span class="string">"actions"</span>: [<span class="string">"create"</span>],
+                    <span class="string">"after"</span>: {
+                        <span class="string">"instance_type"</span>: <span class="string">"t3.micro"</span>,
+                        <span class="string">"tags"</span>: {
+                            <span class="string">"Environment"</span>: <span class="string">"dev"</span>,
+                            <span class="string">"Owner"</span>: <span class="string">"team@example.com"</span>,
+                            <span class="string">"Name"</span>: <span class="string">"test-instance"</span>
+                        },
+                        <span class="string">"associate_public_ip_address"</span>: <span class="keyword">false</span>,
+                        <span class="string">"root_block_device"</span>: [{<span class="string">"encrypted"</span>: <span class="keyword">true</span>, <span class="string">"volume_size"</span>: <span class="number">20</span>}],
+                        <span class="string">"metadata_options"</span>: [{<span class="string">"http_tokens"</span>: <span class="string">"required"</span>}],
+                        <span class="string">"monitoring"</span>: <span class="keyword">true</span>
+                    }
+                }
+            }]
+        }
+    }
+    <span class="function">count</span>(<span class="variable">result</span>) == <span class="number">0</span>
+}
+
+<span class="comment"># Test: Unapproved instance type should be denied</span>
+<span class="function">test_unapproved_instance_type</span> {
+    <span class="variable">result</span> := <span class="function">deny</span> <span class="keyword">with</span> input <span class="keyword">as</span> {
+        <span class="string">"terraform"</span>: {
+            <span class="string">"resource_changes"</span>: [{
+                <span class="string">"address"</span>: <span class="string">"aws_instance.test"</span>,
+                <span class="string">"type"</span>: <span class="string">"aws_instance"</span>,
+                <span class="string">"change"</span>: {
+                    <span class="string">"actions"</span>: [<span class="string">"create"</span>],
+                    <span class="string">"after"</span>: {
+                        <span class="string">"instance_type"</span>: <span class="string">"m5.xlarge"</span>,
+                        <span class="string">"tags"</span>: {
+                            <span class="string">"Environment"</span>: <span class="string">"dev"</span>,
+                            <span class="string">"Owner"</span>: <span class="string">"team@example.com"</span>,
+                            <span class="string">"Name"</span>: <span class="string">"test-instance"</span>
+                        },
+                        <span class="string">"associate_public_ip_address"</span>: <span class="keyword">false</span>,
+                        <span class="string">"root_block_device"</span>: [{<span class="string">"encrypted"</span>: <span class="keyword">true</span>, <span class="string">"volume_size"</span>: <span class="number">20</span>}],
+                        <span class="string">"metadata_options"</span>: [{<span class="string">"http_tokens"</span>: <span class="string">"required"</span>}],
+                        <span class="string">"monitoring"</span>: <span class="keyword">true</span>
+                    }
+                }
+            }]
+        }
+    }
+    <span class="function">count</span>(<span class="variable">result</span>) > <span class="number">0</span>
+}
+
+<span class="comment"># ============================================================================</span>
+<span class="comment"># TEST: Required Tags</span>
+<span class="comment"># ============================================================================</span>
+
+<span class="comment"># Test: Missing Owner tag should be denied</span>
+<span class="function">test_missing_owner_tag</span> {
+    <span class="variable">result</span> := <span class="function">deny</span> <span class="keyword">with</span> input <span class="keyword">as</span> {
+        <span class="string">"terraform"</span>: {
+            <span class="string">"resource_changes"</span>: [{
+                <span class="string">"address"</span>: <span class="string">"aws_instance.test"</span>,
+                <span class="string">"type"</span>: <span class="string">"aws_instance"</span>,
+                <span class="string">"change"</span>: {
+                    <span class="string">"actions"</span>: [<span class="string">"create"</span>],
+                    <span class="string">"after"</span>: {
+                        <span class="string">"instance_type"</span>: <span class="string">"t3.micro"</span>,
+                        <span class="string">"tags"</span>: {
+                            <span class="string">"Environment"</span>: <span class="string">"dev"</span>,
+                            <span class="string">"Name"</span>: <span class="string">"test-instance"</span>
+                        },
+                        <span class="string">"associate_public_ip_address"</span>: <span class="keyword">false</span>,
+                        <span class="string">"root_block_device"</span>: [{<span class="string">"encrypted"</span>: <span class="keyword">true</span>, <span class="string">"volume_size"</span>: <span class="number">20</span>}],
+                        <span class="string">"metadata_options"</span>: [{<span class="string">"http_tokens"</span>: <span class="string">"required"</span>}],
+                        <span class="string">"monitoring"</span>: <span class="keyword">true</span>
+                    }
+                }
+            }]
+        }
+    }
+    <span class="function">count</span>(<span class="variable">result</span>) > <span class="number">0</span>
+}
+
+<span class="comment"># ============================================================================</span>
+<span class="comment"># TEST: Public IP Rules</span>
+<span class="comment"># ============================================================================</span>
+
+<span class="comment"># Test: Public IP in prod should be denied</span>
+<span class="function">test_public_ip_in_prod_denied</span> {
+    <span class="variable">result</span> := <span class="function">deny</span> <span class="keyword">with</span> input <span class="keyword">as</span> {
+        <span class="string">"terraform"</span>: {
+            <span class="string">"resource_changes"</span>: [{
+                <span class="string">"address"</span>: <span class="string">"aws_instance.test"</span>,
+                <span class="string">"type"</span>: <span class="string">"aws_instance"</span>,
+                <span class="string">"change"</span>: {
+                    <span class="string">"actions"</span>: [<span class="string">"create"</span>],
+                    <span class="string">"after"</span>: {
+                        <span class="string">"instance_type"</span>: <span class="string">"t3.small"</span>,
+                        <span class="string">"tags"</span>: {
+                            <span class="string">"Environment"</span>: <span class="string">"prod"</span>,
+                            <span class="string">"Owner"</span>: <span class="string">"team@example.com"</span>,
+                            <span class="string">"Name"</span>: <span class="string">"test-instance"</span>
+                        },
+                        <span class="string">"associate_public_ip_address"</span>: <span class="keyword">true</span>,
+                        <span class="string">"root_block_device"</span>: [{<span class="string">"encrypted"</span>: <span class="keyword">true</span>, <span class="string">"volume_size"</span>: <span class="number">20</span>}],
+                        <span class="string">"metadata_options"</span>: [{<span class="string">"http_tokens"</span>: <span class="string">"required"</span>}],
+                        <span class="string">"monitoring"</span>: <span class="keyword">true</span>
+                    }
+                }
+            }]
+        }
+    }
+    <span class="function">count</span>(<span class="variable">result</span>) > <span class="number">0</span>
+}
+
+<span class="comment"># Test: Public IP in dev should be allowed</span>
+<span class="function">test_public_ip_in_dev_allowed</span> {
+    <span class="variable">result</span> := <span class="function">deny</span> <span class="keyword">with</span> input <span class="keyword">as</span> {
+        <span class="string">"terraform"</span>: {
+            <span class="string">"resource_changes"</span>: [{
+                <span class="string">"address"</span>: <span class="string">"aws_instance.test"</span>,
+                <span class="string">"type"</span>: <span class="string">"aws_instance"</span>,
+                <span class="string">"change"</span>: {
+                    <span class="string">"actions"</span>: [<span class="string">"create"</span>],
+                    <span class="string">"after"</span>: {
+                        <span class="string">"instance_type"</span>: <span class="string">"t3.micro"</span>,
+                        <span class="string">"tags"</span>: {
+                            <span class="string">"Environment"</span>: <span class="string">"dev"</span>,
+                            <span class="string">"Owner"</span>: <span class="string">"team@example.com"</span>,
+                            <span class="string">"Name"</span>: <span class="string">"test-instance"</span>
+                        },
+                        <span class="string">"associate_public_ip_address"</span>: <span class="keyword">true</span>,
+                        <span class="string">"root_block_device"</span>: [{<span class="string">"encrypted"</span>: <span class="keyword">true</span>, <span class="string">"volume_size"</span>: <span class="number">20</span>}],
+                        <span class="string">"metadata_options"</span>: [{<span class="string">"http_tokens"</span>: <span class="string">"required"</span>}],
+                        <span class="string">"monitoring"</span>: <span class="keyword">true</span>
+                    }
+                }
+            }]
+        }
+    }
+    <span class="comment"># No denials related to public IP</span>
+    <span class="keyword">not</span> <span class="function">contains_public_ip_denial</span>(<span class="variable">result</span>)
+}
+
+<span class="function">contains_public_ip_denial</span>(<span class="variable">results</span>) {
+    <span class="variable">some</span> <span class="variable">r</span> <span class="keyword">in</span> <span class="variable">results</span>
+    <span class="function">contains</span>(<span class="variable">r</span>, <span class="string">"Public IP"</span>)
+}
+
+<span class="comment"># ============================================================================</span>
+<span class="comment"># TEST: Encryption Rules</span>
+<span class="comment"># ============================================================================</span>
+
+<span class="comment"># Test: Unencrypted volume should be denied</span>
+<span class="function">test_unencrypted_volume_denied</span> {
+    <span class="variable">result</span> := <span class="function">deny</span> <span class="keyword">with</span> input <span class="keyword">as</span> {
+        <span class="string">"terraform"</span>: {
+            <span class="string">"resource_changes"</span>: [{
+                <span class="string">"address"</span>: <span class="string">"aws_instance.test"</span>,
+                <span class="string">"type"</span>: <span class="string">"aws_instance"</span>,
+                <span class="string">"change"</span>: {
+                    <span class="string">"actions"</span>: [<span class="string">"create"</span>],
+                    <span class="string">"after"</span>: {
+                        <span class="string">"instance_type"</span>: <span class="string">"t3.micro"</span>,
+                        <span class="string">"tags"</span>: {
+                            <span class="string">"Environment"</span>: <span class="string">"dev"</span>,
+                            <span class="string">"Owner"</span>: <span class="string">"team@example.com"</span>,
+                            <span class="string">"Name"</span>: <span class="string">"test-instance"</span>
+                        },
+                        <span class="string">"associate_public_ip_address"</span>: <span class="keyword">false</span>,
+                        <span class="string">"root_block_device"</span>: [{<span class="string">"encrypted"</span>: <span class="keyword">false</span>, <span class="string">"volume_size"</span>: <span class="number">20</span>}],
+                        <span class="string">"metadata_options"</span>: [{<span class="string">"http_tokens"</span>: <span class="string">"required"</span>}],
+                        <span class="string">"monitoring"</span>: <span class="keyword">true</span>
+                    }
+                }
+            }]
+        }
+    }
+    <span class="function">count</span>(<span class="variable">result</span>) > <span class="number">0</span>
+}</code></pre>
+            </div>
+
+            <h3>4.4 Local Policy Testing (Optional)</h3>
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">Terminal</span>
+                    <span class="code-lang">bash</span>
+                </div>
+                <pre><code><span class="comment"># If you have OPA CLI installed, run tests locally</span>
+cd policies
+
+<span class="comment"># Run all tests</span>
+opa test . -v
+
+<span class="comment"># Expected output:</span>
+<span class="comment"># PASS: 6/6</span>
+<span class="comment"># data.spacelift.test_approved_instance_type_dev: PASS</span>
+<span class="comment"># data.spacelift.test_unapproved_instance_type: PASS</span>
+<span class="comment"># data.spacelift.test_missing_owner_tag: PASS</span>
+<span class="comment"># data.spacelift.test_public_ip_in_prod_denied: PASS</span>
+<span class="comment"># data.spacelift.test_public_ip_in_dev_allowed: PASS</span>
+<span class="comment"># data.spacelift.test_unencrypted_volume_denied: PASS</span></code></pre>
+            </div>
+
+            <div class="step-box">Step 6: Commit Policy Files</div>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">Terminal</span>
+                    <span class="code-lang">bash</span>
+                </div>
+                <pre><code><span class="comment"># Return to repo root</span>
+cd ..
+
+<span class="comment"># Add and commit policy files</span>
+git add policies/
+git commit -m "Add EC2 OPA plan policy with tests"
+git push origin main</code></pre>
+            </div>
+        </section>
+
+        <!-- Section 5: Register Policies in Spacelift -->
+        <section id="section-5">
+            <h2>Section 5: Register Policies in Spacelift</h2>
+
+            <div class="step-box">Step 7: Create Policy in Spacelift</div>
+
+            <h3>5.1 Option A: Via Spacelift UI</h3>
+            <ol>
+                <li>Log in to your Spacelift account</li>
+                <li>Navigate to <strong>Policies</strong> in the left sidebar</li>
+                <li>Click <strong>"Create Policy"</strong></li>
+                <li>Configure the policy settings:</li>
+            </ol>
+
+            <div class="config-table">
+                <div class="config-row">
+                    <div class="config-key">Name</div>
+                    <div class="config-value">ec2-deployment-standards</div>
+                </div>
+                <div class="config-row">
+                    <div class="config-key">Type</div>
+                    <div class="config-value">PLAN</div>
+                </div>
+                <div class="config-row">
+                    <div class="config-key">Description</div>
+                    <div class="config-value">Enforces EC2 instance standards: approved types, required tags, encryption, no public IPs in prod</div>
+                </div>
+                <div class="config-row">
+                    <div class="config-key">Body</div>
+                    <div class="config-value">[Paste the contents of ec2-plan-policy.rego]</div>
+                </div>
+            </div>
+
+            <ol start="5">
+                <li>Click <strong>"Create Policy"</strong></li>
+            </ol>
+
+            <h3>5.2 Option B: Via OpenTofu (Admin Stack)</h3>
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">admin/policies.tf</span>
+                    <span class="code-lang">hcl</span>
+                </div>
+                <pre><code><span class="comment"># admin/policies.tf</span>
+<span class="comment"># Policy registration via OpenTofu</span>
+
+<span class="keyword">resource</span> <span class="string">"spacelift_policy"</span> <span class="string">"ec2_deployment_standards"</span> {
+  <span class="property">name</span>        = <span class="string">"ec2-deployment-standards"</span>
+  <span class="property">type</span>        = <span class="string">"PLAN"</span>
+  <span class="property">description</span> = <span class="string">"Enforces EC2 instance deployment standards"</span>
+  
+  <span class="comment"># Read policy from file</span>
+  <span class="property">body</span> = <span class="function">file</span>(<span class="string">"${path.module}/../policies/ec2-plan-policy.rego"</span>)
+  
+  <span class="comment"># Labels for organization</span>
+  <span class="property">labels</span> = [<span class="string">"ec2"</span>, <span class="string">"security"</span>, <span class="string">"compliance"</span>]
+}</code></pre>
+            </div>
+
+            <div class="alert alert-tip">
+                <svg class="alert-icon" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                <div class="alert-content">
+                    <div class="alert-title">Policy as Code</div>
+                    <p>Managing policies via OpenTofu provides version control, review workflows, and automated testing for your compliance rules.</p>
+                </div>
+            </div>
+
+            <h3>5.3 Verify Policy Creation</h3>
+            <ol>
+                <li>Navigate to <strong>Policies</strong> in Spacelift</li>
+                <li>Confirm <code>ec2-deployment-standards</code> appears in the list</li>
+                <li>Click on the policy to view its details</li>
+                <li>Verify the type shows as <strong>PLAN</strong></li>
+            </ol>
+        </section>
+
+        <!-- Section 6: Create the EC2 Stack -->
+        <section id="section-6">
+            <h2>Section 6: Create the EC2 Stack</h2>
+
+            <div class="step-box">Step 8: Create Stack Configuration</div>
+
+            <h3>6.1 Stack Directory Structure</h3>
+            <div class="directory">
+<span class="folder">infrastructure-live/</span>
+├── <span class="file">README.md</span>
+└── <span class="folder">stacks/</span>
+    └── <span class="folder">ec2-webserver/</span>
+        ├── <span class="file">versions.tf</span>
+        ├── <span class="file">providers.tf</span>
+        ├── <span class="file">variables.tf</span>
+        ├── <span class="file">main.tf</span>
+        ├── <span class="file">outputs.tf</span>
+        └── <span class="file">terraform.tfvars</span>
+            </div>
+
+            <h3>6.2 Create Stack Files</h3>
+
+            <h4>versions.tf</h4>
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">stacks/ec2-webserver/versions.tf</span>
+                    <span class="code-lang">hcl</span>
+                </div>
+                <pre><code><span class="comment"># stacks/ec2-webserver/versions.tf</span>
+
+<span class="keyword">terraform</span> {
+  <span class="property">required_version</span> = <span class="string">">= 1.6.0"</span>
+}</code></pre>
+            </div>
+
+            <h4>providers.tf</h4>
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">stacks/ec2-webserver/providers.tf</span>
+                    <span class="code-lang">hcl</span>
+                </div>
+                <pre><code><span class="comment"># stacks/ec2-webserver/providers.tf</span>
+
+<span class="keyword">terraform</span> {
+  <span class="property">required_providers</span> {
+    <span class="type">aws</span> = {
+      <span class="property">source</span>  = <span class="string">"hashicorp/aws"</span>
+      <span class="property">version</span> = <span class="string">"~> 5.0"</span>
+    }
+  }
+}
+
+<span class="keyword">provider</span> <span class="string">"aws"</span> {
+  <span class="property">region</span> = <span class="variable">var</span>.aws_region
+
+  <span class="keyword">default_tags</span> {
+    <span class="property">tags</span> = {
+      <span class="property">Project</span>     = <span class="string">"ec2-webserver"</span>
+      <span class="property">ManagedBy</span>   = <span class="string">"OpenTofu-Spacelift"</span>
+    }
+  }
+}</code></pre>
+            </div>
+
+            <h4>variables.tf</h4>
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">stacks/ec2-webserver/variables.tf</span>
+                    <span class="code-lang">hcl</span>
+                </div>
+                <pre><code><span class="comment"># stacks/ec2-webserver/variables.tf</span>
+
+<span class="keyword">variable</span> <span class="string">"aws_region"</span> {
+  <span class="property">description</span> = <span class="string">"AWS region for resources"</span>
+  <span class="property">type</span>        = <span class="type">string</span>
+  <span class="property">default</span>     = <span class="string">"us-east-1"</span>
+}
+
+<span class="keyword">variable</span> <span class="string">"environment"</span> {
+  <span class="property">description</span> = <span class="string">"Deployment environment"</span>
+  <span class="property">type</span>        = <span class="type">string</span>
+  <span class="property">default</span>     = <span class="string">"dev"</span>
+}
+
+<span class="keyword">variable</span> <span class="string">"instance_type"</span> {
+  <span class="property">description</span> = <span class="string">"EC2 instance type"</span>
+  <span class="property">type</span>        = <span class="type">string</span>
+  <span class="property">default</span>     = <span class="string">"t3.micro"</span>
+}
+
+<span class="keyword">variable</span> <span class="string">"owner_email"</span> {
+  <span class="property">description</span> = <span class="string">"Owner email for tagging"</span>
+  <span class="property">type</span>        = <span class="type">string</span>
+}</code></pre>
+            </div>
+
+            <h4>main.tf - Using VPC Data Sources and Module</h4>
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">stacks/ec2-webserver/main.tf</span>
+                    <span class="code-lang">hcl</span>
+                </div>
+                <pre><code><span class="comment"># stacks/ec2-webserver/main.tf</span>
+
+<span class="comment"># Get default VPC (for demo purposes)</span>
+<span class="keyword">data</span> <span class="string">"aws_vpc"</span> <span class="string">"default"</span> {
+  <span class="property">default</span> = <span class="keyword">true</span>
+}
+
+<span class="comment"># Get subnets in the default VPC</span>
+<span class="keyword">data</span> <span class="string">"aws_subnets"</span> <span class="string">"default"</span> {
+  <span class="keyword">filter</span> {
+    <span class="property">name</span>   = <span class="string">"vpc-id"</span>
+    <span class="property">values</span> = [<span class="variable">data</span>.aws_vpc.default.id]
+  }
+}
+
+<span class="comment"># Web Server Instance - COMPLIANT CONFIGURATION</span>
+<span class="keyword">module</span> <span class="string">"webserver"</span> {
+  <span class="comment"># Source from Spacelift private registry</span>
+  <span class="property">source</span>  = <span class="string">"spacelift.io/YOUR-ACCOUNT/ec2-instance/aws"</span>
+  <span class="property">version</span> = <span class="string">"1.0.0"</span>
+
+  <span class="property">instance_name</span> = <span class="string">"webserver-${var.environment}"</span>
+  <span class="property">instance_type</span> = <span class="variable">var</span>.instance_type
+  <span class="property">environment</span>   = <span class="variable">var</span>.environment
+
+  <span class="property">vpc_id</span>    = <span class="variable">data</span>.aws_vpc.default.id
+  <span class="property">subnet_id</span> = <span class="variable">data</span>.aws_subnets.default.ids[<span class="number">0</span>]
+
+  <span class="comment"># Security settings</span>
+  <span class="property">associate_public_ip</span> = <span class="variable">var</span>.environment != <span class="string">"prod"</span>
+  <span class="property">enable_monitoring</span>   = <span class="keyword">true</span>
+  <span class="property">root_volume_size</span>    = <span class="number">20</span>
+
+  <span class="comment"># Required tags for policy compliance</span>
+  <span class="property">tags</span> = {
+    <span class="property">Owner</span>       = <span class="variable">var</span>.owner_email
+    <span class="property">Application</span> = <span class="string">"webserver"</span>
+    <span class="property">CostCenter</span>  = <span class="string">"engineering"</span>
+  }
+}</code></pre>
+            </div>
+
+            <div class="alert alert-warning">
+                <svg class="alert-icon" fill="currentColor" viewBox="0 0 24 24"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
+                <div class="alert-content">
+                    <div class="alert-title">Replace YOUR-ACCOUNT</div>
+                    <p>Replace <code>YOUR-ACCOUNT</code> with your actual Spacelift account name. You can find this in the module details page in Spacelift.</p>
+                </div>
+            </div>
+
+            <h4>outputs.tf</h4>
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">stacks/ec2-webserver/outputs.tf</span>
+                    <span class="code-lang">hcl</span>
+                </div>
+                <pre><code><span class="comment"># stacks/ec2-webserver/outputs.tf</span>
+
+<span class="keyword">output</span> <span class="string">"instance_id"</span> {
+  <span class="property">description</span> = <span class="string">"EC2 instance ID"</span>
+  <span class="property">value</span>       = <span class="variable">module</span>.webserver.instance_id
+}
+
+<span class="keyword">output</span> <span class="string">"private_ip"</span> {
+  <span class="property">description</span> = <span class="string">"Private IP address"</span>
+  <span class="property">value</span>       = <span class="variable">module</span>.webserver.private_ip
+}
+
+<span class="keyword">output</span> <span class="string">"public_ip"</span> {
+  <span class="property">description</span> = <span class="string">"Public IP address (if assigned)"</span>
+  <span class="property">value</span>       = <span class="variable">module</span>.webserver.public_ip
+}
+
+<span class="keyword">output</span> <span class="string">"security_group_id"</span> {
+  <span class="property">description</span> = <span class="string">"Security group ID"</span>
+  <span class="property">value</span>       = <span class="variable">module</span>.webserver.security_group_id
+}</code></pre>
+            </div>
+
+            <h4>terraform.tfvars</h4>
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">stacks/ec2-webserver/terraform.tfvars</span>
+                    <span class="code-lang">hcl</span>
+                </div>
+                <pre><code><span class="comment"># stacks/ec2-webserver/terraform.tfvars</span>
+
+<span class="property">aws_region</span>    = <span class="string">"us-east-1"</span>
+<span class="property">environment</span>   = <span class="string">"dev"</span>
+<span class="property">instance_type</span> = <span class="string">"t3.micro"</span>
+<span class="property">owner_email</span>   = <span class="string">"team@example.com"</span></code></pre>
+            </div>
+
+            <div class="step-box">Step 9: Register Stack in Spacelift</div>
+
+            <h3>6.3 Create Stack via UI</h3>
+            <ol>
+                <li>Navigate to <strong>Stacks</strong> in Spacelift</li>
+                <li>Click <strong>"Create Stack"</strong></li>
+                <li>Configure the following settings:</li>
+            </ol>
+
+            <div class="config-table">
+                <div class="config-row">
+                    <div class="config-key">Name</div>
+                    <div class="config-value">ec2-webserver-dev</div>
+                </div>
+                <div class="config-row">
+                    <div class="config-key">Repository</div>
+                    <div class="config-value">infrastructure-live</div>
+                </div>
+                <div class="config-row">
+                    <div class="config-key">Branch</div>
+                    <div class="config-value">main</div>
+                </div>
+                <div class="config-row">
+                    <div class="config-key">Project Root</div>
+                    <div class="config-value">stacks/ec2-webserver</div>
+                </div>
+                <div class="config-row">
+                    <div class="config-key">Workflow Tool</div>
+                    <div class="config-value">OpenTofu</div>
+                </div>
+                <div class="config-row">
+                    <div class="config-key">Manage State</div>
+                    <div class="config-value">Enabled</div>
+                </div>
+            </div>
+
+            <h3>6.4 Attach the Policy</h3>
+            <ol>
+                <li>Go to stack settings</li>
+                <li>Navigate to <strong>"Policies"</strong> tab</li>
+                <li>Click <strong>"Attach Policy"</strong></li>
+                <li>Select <code>ec2-deployment-standards</code></li>
+                <li>Click <strong>"Attach"</strong></li>
+            </ol>
+
+            <h3>6.5 Configure AWS Integration</h3>
+            <ol>
+                <li>Go to stack settings</li>
+                <li>Navigate to <strong>"Cloud Integrations"</strong></li>
+                <li>Attach your AWS integration</li>
+                <li>Ensure the IAM role has EC2 permissions</li>
+            </ol>
+
+            <div class="alert alert-info">
+                <svg class="alert-icon" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+                <div class="alert-content">
+                    <div class="alert-title">Required IAM Permissions</div>
+                    <p>Your AWS integration role needs: <code>ec2:*</code>, <code>iam:PassRole</code> (if using instance profiles), and read permissions for VPC resources.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 7: Test Policy Enforcement -->
+        <section id="section-7">
+            <h2>Section 7: Test Policy Enforcement</h2>
+
+            <div class="step-box">Step 10: Test Compliant Deployment</div>
+
+            <h3>7.1 Trigger a Run</h3>
+            <ol>
+                <li>Navigate to your stack in Spacelift</li>
+                <li>Click <strong>"Trigger"</strong> to start a run</li>
+                <li>Wait for the plan to complete</li>
+            </ol>
+
+            <h3>7.2 Expected Results - Compliant Configuration</h3>
+            <p>With the compliant configuration, you should see:</p>
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">Spacelift Plan Output</span>
+                    <span class="code-lang">text</span>
+                </div>
+                <pre><code>✓ Policy: ec2-deployment-standards
+  Type: PLAN
+  Result: PASS
+  
+  Deny rules: 0 triggered
+  Warn rules: 0 triggered
+
+Plan: 3 to add, 0 to change, 0 to destroy.
+
+# module.webserver.aws_security_group.instance will be created
+# module.webserver.aws_instance.this will be created
+# (additional resources...)</code></pre>
+            </div>
+
+            <div class="step-box">Step 11: Test Policy Violations</div>
+
+            <h3>7.3 Test Case 1: Unapproved Instance Type</h3>
+            <p>Modify the stack to use an unapproved instance type:</p>
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">stacks/ec2-webserver/terraform.tfvars (VIOLATION)</span>
+                    <span class="code-lang">hcl</span>
+                </div>
+                <pre><code><span class="comment"># VIOLATION: m5.xlarge is not approved for dev</span>
+<span class="property">instance_type</span> = <span class="string">"m5.xlarge"</span></code></pre>
+            </div>
+
+            <p>Expected policy output:</p>
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">Policy Evaluation - DENIED</span>
+                    <span class="code-lang">text</span>
+                </div>
+                <pre><code>✗ Policy: ec2-deployment-standards
+  Type: PLAN
+  Result: FAIL
+  
+  Deny rules: 1 triggered
+  
+  ✗ EC2 instance 'module.webserver.aws_instance.this': 
+    Instance type 'm5.xlarge' is not approved for dev environment. 
+    Approved types: ["t3.micro", "t3.small", "t2.micro", "t2.small"]</code></pre>
+            </div>
+
+            <h3>7.4 Test Case 2: Missing Required Tag</h3>
+            <p>Remove the Owner tag:</p>
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">stacks/ec2-webserver/main.tf (VIOLATION)</span>
+                    <span class="code-lang">hcl</span>
+                </div>
+                <pre><code><span class="comment"># VIOLATION: Missing Owner tag</span>
+<span class="property">tags</span> = {
+  <span class="comment"># Owner = var.owner_email  # Commented out</span>
+  <span class="property">Application</span> = <span class="string">"webserver"</span>
+}</code></pre>
+            </div>
+
+            <p>Expected policy output:</p>
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">Policy Evaluation - DENIED</span>
+                    <span class="code-lang">text</span>
+                </div>
+                <pre><code>✗ Policy: ec2-deployment-standards
+  Type: PLAN
+  Result: FAIL
+  
+  ✗ EC2 instance 'module.webserver.aws_instance.this': 
+    Required tag 'Owner' is missing. 
+    All instances must have: ["Environment", "Owner", "Name"]</code></pre>
+            </div>
+
+            <h3>7.5 Test Case 3: Public IP in Production</h3>
+            <p>Try to assign a public IP in production:</p>
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">stacks/ec2-webserver/terraform.tfvars (VIOLATION)</span>
+                    <span class="code-lang">hcl</span>
+                </div>
+                <pre><code><span class="property">environment</span> = <span class="string">"prod"</span></code></pre>
+            </div>
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">stacks/ec2-webserver/main.tf (VIOLATION)</span>
+                    <span class="code-lang">hcl</span>
+                </div>
+                <pre><code><span class="comment"># VIOLATION: Public IP in production</span>
+<span class="property">associate_public_ip</span> = <span class="keyword">true</span></code></pre>
+            </div>
+
+            <p>Expected policy output:</p>
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">Policy Evaluation - DENIED</span>
+                    <span class="code-lang">text</span>
+                </div>
+                <pre><code>✗ Policy: ec2-deployment-standards
+  Type: PLAN
+  Result: FAIL
+  
+  ✗ EC2 instance 'module.webserver.aws_instance.this': 
+    Public IP addresses are not allowed in production. 
+    Use a load balancer or bastion host instead.</code></pre>
+            </div>
+
+            <div class="step-box">Step 12: Verify Successful Deployment</div>
+
+            <h3>7.6 Reset to Compliant Configuration</h3>
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">Terminal</span>
+                    <span class="code-lang">bash</span>
+                </div>
+                <pre><code><span class="comment"># Reset terraform.tfvars to compliant values</span>
+cat > stacks/ec2-webserver/terraform.tfvars << 'EOF'
+aws_region    = "us-east-1"
+environment   = "dev"
+instance_type = "t3.micro"
+owner_email   = "team@example.com"
+EOF
+
+<span class="comment"># Commit and push</span>
+git add .
+git commit -m "Reset to compliant configuration"
+git push origin main</code></pre>
+            </div>
+
+            <h3>7.7 Apply the Configuration</h3>
+            <ol>
+                <li>Trigger a new run in Spacelift</li>
+                <li>Verify policy passes</li>
+                <li>Review the plan</li>
+                <li>Click <strong>"Confirm"</strong> to apply</li>
+            </ol>
+
+            <h3>7.8 Verify in AWS</h3>
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">Terminal</span>
+                    <span class="code-lang">bash</span>
+                </div>
+                <pre><code><span class="comment"># Verify instance was created</span>
+aws ec2 describe-instances \
+  --filters "Name=tag:Name,Values=webserver-dev" \
+  --query "Reservations[].Instances[].{ID:InstanceId,Type:InstanceType,State:State.Name}"
+
+<span class="comment"># Expected output:</span>
+<span class="comment"># [</span>
+<span class="comment">#   {</span>
+<span class="comment">#     "ID": "i-0123456789abcdef0",</span>
+<span class="comment">#     "Type": "t3.micro",</span>
+<span class="comment">#     "State": "running"</span>
+<span class="comment">#   }</span>
+<span class="comment"># ]</span></code></pre>
+            </div>
+
+            <div class="success-box">
+                <h3>🎉 Success!</h3>
+                <p>Your EC2 instance was deployed with OPA policy enforcement. The policy successfully validated instance type, required tags, and security settings.</p>
+            </div>
+        </section>
+
+        <!-- Section 8: Troubleshooting -->
+        <section id="section-8">
+            <h2>Section 8: Troubleshooting Guide</h2>
+
+            <h3>8.1 Policy Not Evaluating</h3>
+            <p><strong>Symptom:</strong> Policy shows as attached but doesn't evaluate</p>
+            <p><strong>Solutions:</strong></p>
+            <ol>
+                <li>Verify policy type is <code>PLAN</code></li>
+                <li>Check package declaration is <code>package spacelift</code></li>
+                <li>Ensure policy is attached to the stack</li>
+                <li>Review Spacelift policy logs for errors</li>
+            </ol>
+
+            <h3>8.2 Policy Always Passes</h3>
+            <p><strong>Symptom:</strong> Policy passes even for non-compliant resources</p>
+            <p><strong>Solutions:</strong></p>
+            <ol>
+                <li>Check resource type matching (<code>aws_instance</code> vs <code>aws_launch_template</code>)</li>
+                <li>Verify action filter excludes <code>delete</code></li>
+                <li>Test policy locally with sample input</li>
+                <li>Add debug output: <code>deny["DEBUG: checking..."]</code></li>
+            </ol>
+
+            <h3>8.3 Input Structure Issues</h3>
+            <p><strong>Symptom:</strong> Policy fails with "undefined" errors</p>
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">Debug Policy</span>
+                    <span class="code-lang">rego</span>
+                </div>
+                <pre><code><span class="comment"># Add this to debug input structure</span>
+<span class="function">deny</span>[<span class="variable">reason</span>] {
+    <span class="variable">resource</span> := <span class="variable">input</span>.terraform.resource_changes[_]
+    <span class="variable">reason</span> := <span class="function">sprintf</span>(<span class="string">"DEBUG: Resource %v has type %v"</span>, [<span class="variable">resource</span>.address, <span class="variable">resource</span>.type])
+}</code></pre>
+            </div>
+
+            <h3>8.4 Module Source Not Found</h3>
+            <p><strong>Symptom:</strong> Error fetching module from Spacelift registry</p>
+            <p><strong>Solutions:</strong></p>
+            <ol>
+                <li>Verify module is registered in Spacelift</li>
+                <li>Check account name in source path</li>
+                <li>Ensure version tag exists (e.g., <code>ec2-instance/v1.0.0</code>)</li>
+                <li>Verify stack has access to the module's space</li>
+            </ol>
+
+            <h3>8.5 AWS Authentication Errors</h3>
+            <p><strong>Symptom:</strong> AWS API errors during plan/apply</p>
+            <p><strong>Solutions:</strong></p>
+            <ol>
+                <li>Verify AWS integration is attached to stack</li>
+                <li>Check IAM role trust policy includes Spacelift</li>
+                <li>Confirm IAM role has required permissions</li>
+                <li>Review CloudTrail for access denied events</li>
+            </ol>
+
+            <h3>8.6 Common Rego Syntax Errors</h3>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Error</th>
+                            <th>Cause</th>
+                            <th>Fix</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>undefined ref</code></td>
+                            <td>Accessing non-existent path</td>
+                            <td>Add existence checks or use <code>else</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>var x is unused</code></td>
+                            <td>Declared but not used</td>
+                            <td>Use <code>_</code> for ignored vars</td>
+                        </tr>
+                        <tr>
+                            <td><code>type error</code></td>
+                            <td>Wrong type comparison</td>
+                            <td>Check value types (<code>true</code> vs <code>"true"</code>)</td>
+                        </tr>
+                        <tr>
+                            <td><code>conflicting rules</code></td>
+                            <td>Multiple default values</td>
+                            <td>Use only one <code>default</code> per rule</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Section 9: Best Practices -->
+        <section id="section-9">
+            <h2>Section 9: Best Practices and Next Steps</h2>
+
+            <h3>9.1 Policy Design Best Practices</h3>
+            <h4>Structure</h4>
+            <ol>
+                <li>Use clear, descriptive rule names</li>
+                <li>Group related rules with comments</li>
+                <li>Define configuration values at the top</li>
+                <li>Create helper functions for reusable logic</li>
+            </ol>
+
+            <h4>Messages</h4>
+            <ol>
+                <li>Include resource address in messages</li>
+                <li>Explain what's wrong and how to fix it</li>
+                <li>List allowed values when denying</li>
+                <li>Use warnings for recommendations, denies for requirements</li>
+            </ol>
+
+            <h4>Testing</h4>
+            <ol>
+                <li>Write tests for every deny rule</li>
+                <li>Test both positive and negative cases</li>
+                <li>Use realistic input data</li>
+                <li>Run tests in CI pipeline</li>
+            </ol>
+
+            <h3>9.2 Security Recommendations</h3>
+            <ul class="checklist">
+                <li>Always require encrypted volumes</li>
+                <li>Block 0.0.0.0/0 ingress rules</li>
+                <li>Enforce IMDSv2 for all instances</li>
+                <li>Require specific CIDR ranges for SSH</li>
+                <li>Deny public IPs in production</li>
+            </ul>
+
+            <h3>9.3 Recommended Next Steps</h3>
+            <ul class="checklist">
+                <li>Add APPROVAL policies for production changes</li>
+                <li>Create TRIGGER policies for automated deployments</li>
+                <li>Implement cost estimation policies</li>
+                <li>Add policies for other resource types (RDS, S3, etc.)</li>
+                <li>Set up policy testing in CI/CD pipeline</li>
+                <li>Create policy library for organization-wide use</li>
+            </ul>
+
+            <div class="success-box">
+                <h3>🎉 Congratulations!</h3>
+                <p>You have completed the OpenTofu EC2 Deployment with OPA Policies lab. You now know how to create EC2 modules, write and test OPA policies, and enforce infrastructure standards with Spacelift.</p>
+            </div>
+        </section>
+
+        <!-- Quick Reference -->
+        <section class="quick-ref">
+            <h3>Quick Reference Card</h3>
+
+            <h4>Essential Commands</h4>
+            <div class="code-block" style="background: rgba(255,255,255,0.05);">
+                <pre><code><span class="comment"># Module Development</span>
+tofu init                    <span class="comment"># Initialize module</span>
+tofu validate               <span class="comment"># Validate configuration</span>
+tofu fmt -recursive         <span class="comment"># Format all files</span>
+
+<span class="comment"># Version Management</span>
+git tag ec2-instance/v1.0.0 <span class="comment"># Create version tag</span>
+git push origin --tags      <span class="comment"># Push all tags</span>
+
+<span class="comment"># Policy Testing (OPA CLI)</span>
+opa test . -v               <span class="comment"># Run all tests</span>
+opa eval -d policy.rego \
+  -i input.json "data.spacelift.deny"  <span class="comment"># Evaluate policy</span></code></pre>
+            </div>
+
+            <h4>Policy Rule Patterns</h4>
+            <div class="code-block" style="background: rgba(255,255,255,0.05);">
+                <pre><code><span class="comment"># Deny rule pattern</span>
+<span class="function">deny</span>[<span class="variable">reason</span>] {
+    <span class="variable">resource</span> := <span class="variable">input</span>.terraform.resource_changes[_]
+    <span class="variable">resource</span>.type == <span class="string">"aws_instance"</span>
+    <span class="comment"># conditions...</span>
+    <span class="variable">reason</span> := <span class="function">sprintf</span>(<span class="string">"Message: %v"</span>, [<span class="variable">value</span>])
+}
+
+<span class="comment"># Warn rule pattern</span>
+<span class="function">warn</span>[<span class="variable">reason</span>] {
+    <span class="comment"># Same structure as deny</span>
+}</code></pre>
+            </div>
+
+            <h4>Key URLs</h4>
+            <div class="table-wrapper">
+                <table style="background: transparent; color: #e0e0e8;">
+                    <tr>
+                        <td>Spacelift Docs</td>
+                        <td><a href="https://docs.spacelift.io" style="color: #9cdcfe;">https://docs.spacelift.io</a></td>
+                    </tr>
+                    <tr>
+                        <td>OPA Rego Reference</td>
+                        <td><a href="https://www.openpolicyagent.org/docs/latest/policy-reference/" style="color: #9cdcfe;">https://www.openpolicyagent.org/docs/latest/</a></td>
+                    </tr>
+                    <tr>
+                        <td>Spacelift Policy Docs</td>
+                        <td><a href="https://docs.spacelift.io/concepts/policy" style="color: #9cdcfe;">https://docs.spacelift.io/concepts/policy</a></td>
+                    </tr>
+                    <tr>
+                        <td>OpenTofu Docs</td>
+                        <td><a href="https://opentofu.org/docs" style="color: #9cdcfe;">https://opentofu.org/docs</a></td>
+                    </tr>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <footer class="lab-footer">
+        <p>OpenTofu EC2 Deployment with OPA Policies Lab • Spacelift Training</p>
+    </footer>
+</body>
+</html>
